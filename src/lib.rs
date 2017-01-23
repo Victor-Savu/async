@@ -13,7 +13,7 @@ trait Coroutine<Input> : Sized {
 }
 
 macro_rules! each {
-    ($iter:expr => $elem:ident $loop_body:block then with $then:ident $then_body:block else $else_body:block) => {{
+    ($iter:expr => $elem:pat in $loop_body:block then with $then:pat in $then_body:block otherwise $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
@@ -36,7 +36,7 @@ macro_rules! each {
         fin
     }};
 
-    ($iter:expr => $elem:ident $loop_body:block then $then_body:block else $else_body:block) => {{
+    ($iter:expr => $elem:pat in $loop_body:block then $then_body:block otherwise $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
@@ -59,7 +59,7 @@ macro_rules! each {
         fin
     }};
 
-    ($iter:expr => $elem:ident $loop_body:block then with $then:ident $then_body:block) => {{
+    ($iter:expr => $elem:pat in $loop_body:block then with $then:pat in $then_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
@@ -78,7 +78,7 @@ macro_rules! each {
         fin
     }};
 
-    ($iter:expr => $elem:ident $loop_body:block then $then_body:block) => {{
+    ($iter:expr => $elem:pat in $loop_body:block then $then_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
@@ -97,7 +97,7 @@ macro_rules! each {
         fin
     }};
 
-    ($iter:expr => $elem:ident $loop_body:block else $else_body:block) => {{
+    ($iter:expr => $elem:pat in $loop_body:block otherwise $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
@@ -120,7 +120,7 @@ macro_rules! each {
         fin
     }};
 
-    ($iter:expr => $elem:ident $loop_body:block) => {{
+    ($iter:expr => $elem:pat in $loop_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         loop {
@@ -181,13 +181,13 @@ mod tests {
         let bart = Counter::<i64>{i: 3, lim: 10};
         let mut cnt = 3;
         let large_num = 1000;
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
             if large_num < 5 { break; }
-        } then with msg {
+        } then with msg in {
             String::from(msg) + " Yayy!"
-        } else {
+        } otherwise {
             String::from("I got broken!")
         });
         assert_eq!(cnt, 10);
@@ -198,13 +198,13 @@ mod tests {
     fn full_each_with_break() {
         let bart = Counter::<i64>{i: 3, lim: 10};
         let mut cnt = 3;
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
             break;
-        } then with msg {
+        } then with msg in {
             msg
-        } else {
+        } otherwise {
             "I got broken!"
         });
         assert_eq!(cnt, 4);
@@ -216,13 +216,13 @@ mod tests {
         let bart = Counter::<i64>{i: 3, lim: 10};
         let mut cnt = 3;
         let large_number = 1000;
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
             if large_number < 5 { break; }
         } then {
             "At last!"
-        } else {
+        } otherwise {
             "I got broken!"
         });
         assert_eq!(cnt, 10);
@@ -233,11 +233,11 @@ mod tests {
     fn each_break_no_then() {
         let bart = InfiniteCounter::<i64>{i: 3};
         let mut cnt = 3;
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
             if cnt >= 20 { break; }
-        } else {
+        } otherwise {
             "I got broken!"
         });
         assert_eq!(cnt, 20);
@@ -248,7 +248,7 @@ mod tests {
     fn each_no_else() {
         let bart = Counter::<i64>{i: 3, lim: 10};
         let mut cnt = 3;
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
         } then {
@@ -262,7 +262,7 @@ mod tests {
     fn each_no_then_else() {
         let bart = Counter::<i64>{i: 3, lim: 10};
         let mut cnt = 3;
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
         });
@@ -275,13 +275,52 @@ mod tests {
         let bart = Counter::<i64>{i: 3, lim: 10};
         let mut cnt = 3;
         #[allow(unreachable_code)]
-        let message = each!(bart => i {
+        let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
-        } else {
+        } otherwise {
             "bogus"
         });
         assert_eq!(cnt, 10);
         assert_eq!(message, "I'm done!");
+    }
+
+    #[test]
+    fn each_capture_patterns() {
+
+        struct Blabber<T>{
+            i: T,
+            lim: T
+        }
+
+        impl Coroutine<()> for Blabber<i64> {
+            type Yield = (i64, i64);
+            type Return = (&'static str, i64);
+
+            fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+                if self.i < self.lim {
+                    CoResult::Yield((self.i, self.lim), Blabber{i: self.i + 1, lim: self.lim})
+                } else {
+                    CoResult::Return(("I'm done!", self.lim))
+                }
+            }
+        }
+
+        let bart = Blabber::<i64>{i: 3, lim: 10};
+        let mut cnt = 3;
+        let large_num = 1000;
+        let (message, lim) = each!(bart => (i, lim) in {
+            assert_eq!(i, cnt);
+            assert_eq!(lim, 10);
+            cnt += 1;
+            if large_num < 5 { break; }
+        } then with (msg, lim) in {
+            (String::from(msg) + " Yayy!", lim)
+        } otherwise {
+            (String::from("I got broken!"), -1)
+        });
+        assert_eq!(cnt, 10);
+        assert_eq!(message, String::from("I'm done! Yayy!"));
+        assert_eq!(lim, 10);
     }
 }
