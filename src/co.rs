@@ -1,9 +1,9 @@
 pub enum CoResult<YieldT, CoroT, ReturnT> {
     Yield(YieldT, CoroT),
-    Return(ReturnT)
+    Return(ReturnT),
 }
 
-pub trait Coroutine<Input> : Sized {
+pub trait Coroutine<Input>: Sized {
     type Yield;
     type Return;
 
@@ -143,9 +143,9 @@ macro_rules! each {
 mod tests {
     use super::*;
 
-    struct Counter<T>{
+    struct Counter<T> {
         i: T,
-        lim: T
+        lim: T,
     }
 
     impl Coroutine<()> for Counter<i64> {
@@ -154,15 +154,19 @@ mod tests {
 
         fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
             if self.i < self.lim {
-                CoResult::Yield(self.i, Counter{i: self.i + 1, lim: self.lim})
+                CoResult::Yield(self.i,
+                                Counter {
+                                    i: self.i + 1,
+                                    lim: self.lim,
+                                })
             } else {
                 CoResult::Return("I'm done!")
             }
         }
     }
 
-    struct InfiniteCounter<T>{
-        i: T
+    struct InfiniteCounter<T> {
+        i: T,
     }
 
     impl Coroutine<()> for InfiniteCounter<i64> {
@@ -170,13 +174,13 @@ mod tests {
         type Return = !;
 
         fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
-            CoResult::Yield(self.i, InfiniteCounter{i: self.i + 1})
+            CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
         }
     }
 
     #[test]
     fn full_each() {
-        let bart = Counter::<i64>{i: 3, lim: 10};
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let large_num = 1000;
         let message = each!(bart => i in {
@@ -194,7 +198,7 @@ mod tests {
 
     #[test]
     fn full_each_with_break() {
-        let bart = Counter::<i64>{i: 3, lim: 10};
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let message = each!(bart => i in {
             assert_eq!(i, cnt);
@@ -211,7 +215,7 @@ mod tests {
 
     #[test]
     fn each_ignore_return() {
-        let bart = Counter::<i64>{i: 3, lim: 10};
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let large_number = 1000;
         let message = each!(bart => i in {
@@ -229,7 +233,7 @@ mod tests {
 
     #[test]
     fn each_break_no_then() {
-        let bart = InfiniteCounter::<i64>{i: 3};
+        let bart = InfiniteCounter::<i64> { i: 3 };
         let mut cnt = 3;
         let message = each!(bart => i in {
             assert_eq!(i, cnt);
@@ -244,7 +248,7 @@ mod tests {
 
     #[test]
     fn each_no_else() {
-        let bart = Counter::<i64>{i: 3, lim: 10};
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let message = each!(bart => i in {
             assert_eq!(i, cnt);
@@ -258,7 +262,7 @@ mod tests {
 
     #[test]
     fn each_no_then_else() {
-        let bart = Counter::<i64>{i: 3, lim: 10};
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let message = each!(bart => i in {
             assert_eq!(i, cnt);
@@ -270,7 +274,7 @@ mod tests {
 
     #[test]
     fn each_no_then() {
-        let bart = Counter::<i64>{i: 3, lim: 10};
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         #[allow(unreachable_code)]
         let message = each!(bart => i in {
@@ -286,9 +290,9 @@ mod tests {
     #[test]
     fn each_capture_patterns() {
 
-        struct Blabber<T>{
+        struct Blabber<T> {
             i: T,
-            lim: T
+            lim: T,
         }
 
         impl Coroutine<()> for Blabber<i64> {
@@ -297,14 +301,18 @@ mod tests {
 
             fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
                 if self.i < self.lim {
-                    CoResult::Yield((self.i, self.lim), Blabber{i: self.i + 1, lim: self.lim})
+                    CoResult::Yield((self.i, self.lim),
+                                    Blabber {
+                                        i: self.i + 1,
+                                        lim: self.lim,
+                                    })
                 } else {
                     CoResult::Return(("I'm done!", self.lim))
                 }
             }
         }
 
-        let bart = Blabber::<i64>{i: 3, lim: 10};
+        let bart = Blabber::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let large_num = 1000;
         let (message, lim) = each!(bart => (i, lim) in {
