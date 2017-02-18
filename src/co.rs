@@ -16,18 +16,21 @@ pub trait Coroutine<Input>: Sized {
 macro_rules! each {
     // full_each
     ($iter:expr => $elem:pat in
-        $loop_body:block
+         $loop_body:block
      then with $then:pat in
-        $then_body:block
-     otherwise $else_body:block) => {{
+         $then_body:block
+     otherwise
+         $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
             loop {
-                #[allow(unused_assignments)]
                 match iter_.next(()) {
                     CoResult::Yield($elem, tail) => {
-                        iter_ = tail;
+                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                        {
+                            iter_ = tail;
+                        }
                         $loop_body;
                     },
                     CoResult::Return($then) => {
@@ -50,17 +53,25 @@ macro_rules! each {
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
-            #[allow(unused_assignments)]
-            match iter_.next(()) {
-                CoResult::Yield($elem, tail) => {
-                    iter_ = tail;
-                    $loop_body;
-                },
-                CoResult::Return($then) => {
-                    fin = $then_body;
-                    break 'outer;
-                }
-            };
+            loop {
+                match iter_.next(()) {
+                    CoResult::Yield($elem, tail) => {
+                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                        {
+                            iter_ = tail;
+                        }
+                        $loop_body;
+                    },
+                    CoResult::Return($then) => {
+                        fin = $then_body;
+                        break 'outer;
+                    }
+                };
+            }
+            #[allow(unreachable_code)] // if $loop_body contains a `break` statement
+            {
+                break;
+            }
         }
         fin
     }};
@@ -76,10 +87,12 @@ macro_rules! each {
         let fin;
         'outer: loop {
             loop {
-                #[allow(unused_assignments)]
                 match iter_.next(()) {
                     CoResult::Yield($elem, tail) => {
-                        iter_ = tail;
+                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                        {
+                            iter_ = tail;
+                        }
                         $loop_body;
                     },
                     CoResult::Return(_) => {
@@ -102,17 +115,25 @@ macro_rules! each {
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
-            #[allow(unused_assignments)]
-            match iter_.next(()) {
-                CoResult::Yield($elem, tail) => {
-                    iter_ = tail;
-                    $loop_body;
-                },
-                CoResult::Return(_) => {
-                    fin = $then_body;
-                    break 'outer;
-                }
-            };
+            loop {
+                match iter_.next(()) {
+                    CoResult::Yield($elem, tail) => {
+                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                        {
+                            iter_ = tail;
+                        }
+                        $loop_body;
+                    },
+                    CoResult::Return(_) => {
+                        fin = $then_body;
+                        break 'outer;
+                    }
+                };
+            }
+            #[allow(unreachable_code)] // if $loop_body contains a `break` statement
+            {
+                break;
+            }
         }
         fin
     }};
@@ -126,10 +147,13 @@ macro_rules! each {
         let fin;
         'outer: loop {
             loop {
-                #[allow(unused_assignments, unreachable_patterns, unreachable_code)]
+                #[allow(unreachable_patterns, unreachable_code)] // if $iter::Return is !
                 match iter_.next(()) {
                     CoResult::Yield($elem, tail) => {
-                        iter_ = tail;
+                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                        {
+                            iter_ = tail;
+                        }
                         $loop_body;
                     },
                     CoResult::Return(ret) => {
@@ -150,10 +174,12 @@ macro_rules! each {
         let mut iter_ = $iter;
         let fin;
         loop {
-            #[allow(unused_assignments)]
             match iter_.next(()) {
                 CoResult::Yield($elem, tail) => {
-                    iter_ = tail;
+                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                        {
+                            iter_ = tail;
+                        }
                     $loop_body;
                 },
                 CoResult::Return(ret) => {
@@ -335,10 +361,10 @@ mod tests {
     fn no_then() {
         let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
-        #[allow(unreachable_code)]
         let message = each!(bart => i in {
             assert_eq!(i, cnt);
             cnt += 1;
+            if cnt > 100 { break; }
         } otherwise {
             "bogus"
         });
