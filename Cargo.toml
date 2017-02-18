@@ -1,6 +1,5 @@
 [package]
-name = "async"
+name = "each_other"
 version = "0.1.0"
-authors = ["victor"]
-
-[dependencies]
+authors = ["Victor-Nicolae Savu"]
+license = "Apache-2.0"
