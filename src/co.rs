@@ -19,7 +19,7 @@ macro_rules! each {
          $loop_body:block
      then with $then:pat in
          $then_body:block
-     otherwise
+     else
          $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
@@ -45,7 +45,7 @@ macro_rules! each {
         fin
     }};
 
-    // no_otherwise
+    // no_else
     ($iter:expr => $elem:pat in
          $loop_body:block
      then with $then:pat in
@@ -81,7 +81,7 @@ macro_rules! each {
          $loop_body:block
      then
          $then_body:block
-     otherwise
+     else
          $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
@@ -107,7 +107,7 @@ macro_rules! each {
         fin
     }};
 
-    // no_with_otherwise
+    // no_with_else
     ($iter:expr => $elem:pat in
          $loop_body:block
      then
@@ -141,7 +141,7 @@ macro_rules! each {
     // no_then
     ($iter:expr => $elem:pat in
          $loop_body:block
-     otherwise
+     else
          $else_body:block) => {{
         let mut iter_ = $iter;
         let fin;
@@ -168,7 +168,7 @@ macro_rules! each {
         fin
     }};
 
-    // no_then_otherwise
+    // no_then_else
     ($iter:expr => $elem:pat in
          $loop_body:block) => {{
         let mut iter_ = $iter;
@@ -243,7 +243,7 @@ mod tests {
             if large_num < 5 { break; }
         } then with msg in {
             String::from(msg) + " Yayy!"
-        } otherwise {
+        } else {
             String::from("I got broken!")
         });
         assert_eq!(cnt, 10);
@@ -260,7 +260,7 @@ mod tests {
             break;
         } then with msg in {
             msg
-        } otherwise {
+        } else {
             "I got broken!"
         });
         assert_eq!(cnt, 4);
@@ -302,7 +302,7 @@ mod tests {
             if large_num < 5 { break; }
         } then with (msg, lim) in {
             (String::from(msg) + " Yayy!", lim)
-        } otherwise {
+        } else {
             (String::from("I got broken!"), -1)
         });
         assert_eq!(cnt, 10);
@@ -321,7 +321,7 @@ mod tests {
             if large_number < 5 { break; }
         } then {
             "At last!"
-        } otherwise {
+        } else {
             "I got broken!"
         });
         assert_eq!(cnt, 10);
@@ -329,7 +329,7 @@ mod tests {
     }
     
     #[test]
-    fn no_otherwise() {
+    fn no_else() {
         let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let message = each!(bart => i in {
@@ -343,7 +343,7 @@ mod tests {
     }
 
     #[test]
-    fn no_with_otherwise() {
+    fn no_with_else() {
         let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let message = each!(bart => i in {
@@ -365,7 +365,7 @@ mod tests {
             assert_eq!(i, cnt);
             cnt += 1;
             if cnt > 100 { break; }
-        } otherwise {
+        } else {
             "bogus"
         });
         assert_eq!(cnt, 10);
@@ -380,7 +380,7 @@ mod tests {
             assert_eq!(i, cnt);
             cnt += 1;
             if cnt >= 20 { break; }
-        } otherwise {
+        } else {
             "I got broken!"
         });
         assert_eq!(cnt, 20);
@@ -388,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    fn no_then_otherwise() {
+    fn no_then_else() {
         let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let message = each!(bart => i in {

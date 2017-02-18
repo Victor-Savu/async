@@ -153,7 +153,7 @@ mod tests {
             if large_num < 5 { break; }
         } then with msg in {
             String::from(msg) + " Yayy!"
-        } otherwise {
+        } else {
             String::from("I got broken!")
         });
         assert_eq!(cnt, 10);
