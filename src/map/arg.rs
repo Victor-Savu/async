@@ -4,8 +4,8 @@ use map::CoMap;
 pub struct CoMapArg<C, F>(CoMap<C, F>);
 
 impl<C, F, Input, Output> Coroutine<Input> for CoMapArg<C, F>
-    where F: FnMut(Input) -> Output,
-          C: Sized + Coroutine<Output>
+    where C: Coroutine<Output>,
+          F: FnMut(Input) -> Output
 {
     type Yield = C::Yield;
     type Return = C::Return;
@@ -19,9 +19,7 @@ impl<C, F, Input, Output> Coroutine<Input> for CoMapArg<C, F>
     }
 }
 
-pub trait MapArg<F, Input, Output>
-    where F: FnOnce(Input) -> Output,
-          Self: Sized + Coroutine<Output>
+pub trait MapArg<F, Input, Output>: Sized
 {
     fn map_arg(self, f: F) -> CoMapArg<Self, F> {
         CoMapArg(CoMap { c: self, f: f })
@@ -29,7 +27,7 @@ pub trait MapArg<F, Input, Output>
 }
 
 impl<C, F, Input, Output> MapArg<F, Input, Output> for C
-    where C: Sized + Coroutine<Output>,
-          F: FnOnce(Input) -> Output
+    where C: Coroutine<Output>,
+          F: FnMut(Input) -> Output
 {
 }

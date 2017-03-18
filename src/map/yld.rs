@@ -4,8 +4,9 @@ use map::CoMap;
 pub struct CoMapYield<C, F>(CoMap<C, F>);
 
 impl<C, F, Input, Output> Coroutine<Input> for CoMapYield<C, F>
-    where F: FnMut(C::Yield) -> Output,
-          C: Sized + Coroutine<Input>
+    where C: Coroutine<Input>,
+          F: FnMut(C::Yield) -> Output
+          
 {
     type Yield = Output;
     type Return = C::Return;
@@ -19,9 +20,7 @@ impl<C, F, Input, Output> Coroutine<Input> for CoMapYield<C, F>
     }
 }
 
-pub trait MapYield<F, Input, Output>
-    where Self: Sized + Coroutine<Input>,
-          F: FnOnce(Self::Yield) -> Output
+pub trait MapYield<F, Input, Output>: Sized
 {
     fn map_yield(self, f: F) -> CoMapYield<Self, F> {
         CoMapYield(CoMap { c: self, f: f })
@@ -29,7 +28,7 @@ pub trait MapYield<F, Input, Output>
 }
 
 impl<C, F, Input, Output> MapYield<F, Input, Output> for C
-    where C: Sized + Coroutine<Input>,
+    where C: Coroutine<Input>,
           F: FnOnce(C::Yield) -> Output
 {
 }

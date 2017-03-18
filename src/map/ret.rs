@@ -4,8 +4,8 @@ use map::CoMap;
 pub struct CoMapReturn<C, F>(CoMap<C, F>);
 
 impl<C, F, Input, Output> Coroutine<Input> for CoMapReturn<C, F>
-    where F: FnOnce(C::Return) -> Output,
-          C: Sized + Coroutine<Input>
+    where C: Coroutine<Input>,
+          F: FnOnce(C::Return) -> Output
 {
     type Yield = C::Yield;
     type Return = Output;
@@ -18,17 +18,14 @@ impl<C, F, Input, Output> Coroutine<Input> for CoMapReturn<C, F>
     }
 }
 
-pub trait MapReturn<F, Input, Output>
-    where F: FnOnce(Self::Return) -> Output,
-          Self: Sized + Coroutine<Input>
-{
+pub trait MapReturn<F, Input, Output>: Sized {
     fn map_return(self, f: F) -> CoMapReturn<Self, F> {
         CoMapReturn(CoMap { c: self, f: f })
     }
 }
 
 impl<C, F, Input, Output> MapReturn<F, Input, Output> for C
-    where C: Sized + Coroutine<Input>,
+    where C: Coroutine<Input>,
           F: FnOnce(C::Return) -> Output
 {
 }

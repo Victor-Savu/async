@@ -30,9 +30,7 @@ impl<Input, Left, Right> Coroutine<Input> for CoCompose<Left, Right>
     }
 }
 
-pub trait Compose<Input, Left, Right>
-    where Self: Coroutine<Right::Yield>,
-          Right: Coroutine<Input>
+pub trait Compose<Input, Left, Right>: Sized
 {
     fn compose(self, r: Right) -> CoCompose<Self, Right> {
         CoCompose {

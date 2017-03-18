@@ -32,17 +32,16 @@ impl<F, L, Input> Coroutine<Input> for CoChain<F, L>
     }
 }
 
-pub trait Chain<L, Input> where Self: Sized
-{
+pub trait Chain<L, Input>: Sized {
     fn chain(self, l: L) -> CoChain<Self, L> {
         CoChain::Former(self, l)
     }
 }
 
 impl<F, L, Input> Chain<L, Input> for F
-    where F: Sized + Coroutine<Input>,
+    where F: Coroutine<Input>,
           L: Coroutine<Input>,
-          Input: From<<F as Coroutine<Input>>::Return>,
+          Input: From<<F as Coroutine<Input>>::Return>
 {
 }
 
