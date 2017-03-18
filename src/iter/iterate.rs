@@ -1,32 +1,38 @@
-use std;
 use co::{Coroutine, CoResult};
 
-pub struct CoIterator<C>(Option<C>);
+pub struct CoIterate<C>(Option<C>);
 
-trait Iterator<C> where C: Coroutine<()>, Self: Sized
+impl<C> Iterator for CoIterate<C>
+    where C: Coroutine<()>
 {
-    fn iter(self) -> CoIterator<Self> {
-        CoIterator(Some(self))
-    }
-}
-
-impl<C> Iterator<C> for C where C: Coroutine<()>
-{
-}
-
-impl<C> std::iter::Iterator for CoIterator<C> where C: Coroutine<()> {
     type Item = C::Yield;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.0.take() {
-            Some(coro) => match coro.next(()) {
-                CoResult::Yield(i, cnt) => { self.0 = Some(cnt); Some(i) },
-                _ => None
-            },
-            None => None
+            Some(coro) => {
+                match coro.next(()) {
+                    CoResult::Yield(i, cnt) => {
+                        self.0 = Some(cnt);
+                        Some(i)
+                    }
+                    _ => None,
+                }
+            }
+            None => None,
         }
     }
 }
+
+trait Iterate<C>
+    where C: Coroutine<()>,
+          Self: Sized
+{
+    fn iterate(self) -> CoIterate<Self> {
+        CoIterate(Some(self))
+    }
+}
+
+impl<C> Iterate<C> for C where C: Coroutine<()> {}
 
 #[cfg(test)]
 mod tests {
@@ -68,12 +74,11 @@ mod tests {
     }
 
     #[test]
-    fn iterate_over_coroutine()
-    {
+    fn iterate_over_coroutine() {
         let mut cnt = 3;
         let lim = 10;
-        let bart = Counter::<i64> {i: cnt, lim: lim};
-        for i in  bart.iter() {
+        let bart = Counter::<i64> { i: cnt, lim: lim };
+        for i in bart.iterate() {
             assert_eq!(i, cnt);
             cnt += 1;
         }

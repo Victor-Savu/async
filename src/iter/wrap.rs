@@ -1,19 +1,30 @@
 use co::{Coroutine, CoResult};
 
-struct CoIterWrapper<T>(T);
+struct CoWrap<T>(T);
 
-impl<Iter> Coroutine<()> for CoIterWrapper<Iter> where Iter: Iterator {
+impl<Iter> Coroutine<()> for CoWrap<Iter> where Iter: Iterator {
     type Yield = Iter::Item;
     type Return = Iter;
 
     fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
         let mut i = self.0;
         match i.next() {
-            Some(item) => CoResult::Yield(item, CoIterWrapper(i)),
+            Some(item) => CoResult::Yield(item, CoWrap(i)),
             _ => CoResult::Return(i)
         }
     }
 }
+
+trait Wrap<I>
+    where I: Iterator,
+          Self: Sized
+{
+    fn wrap(self) -> CoWrap<Self> {
+        CoWrap(self)
+    }
+}
+
+impl<I> Wrap<I> for I where I: Iterator {}
 
 #[cfg(test)]
 mod tests {
@@ -22,7 +33,7 @@ mod tests {
     #[test]
     fn wrap_iterator() {
         let mut cnt = 1;
-        let message = each!(CoIterWrapper(1..10) => i in {
+        let message = each!((1..10).wrap() => i in {
             assert_eq!(i, cnt);
             cnt += 1;
         } then with mut iter in {

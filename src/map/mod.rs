@@ -48,7 +48,7 @@ mod tests {
 
     #[test]
     fn map_app() {
-        let bart = Counter::<i64> { i:3, lim: 10 };
+        let bart = Counter::<i64> { i: 3, lim: 10 };
         let mut cnt = 3;
         let large_num = 1000;
         let message = each!(bart => i in {

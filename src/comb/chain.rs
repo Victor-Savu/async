@@ -5,22 +5,6 @@ pub enum CoChain<F, L> {
     Latter(L),
 }
 
-trait Chain<L, Input>
-    where L: Coroutine<Input>,
-          Self: Sized + Coroutine<Input, Return=Input>
-{
-    fn chain(self, l: L) -> CoChain<Self, L> {
-        CoChain::Former(self, l)
-    }
-}
-
-impl<F, L, Input> Chain<L, Input> for F
-    where F: Coroutine<Input, Return = Input>,
-          L: Coroutine<Input>
-{
-}
-
-
 impl<F, L, Input> Coroutine<Input> for CoChain<F, L>
     where F: Coroutine<Input, Return = Input>,
           L: Coroutine<Input, Yield = <F as Coroutine<Input>>::Yield>
@@ -44,4 +28,19 @@ impl<F, L, Input> Coroutine<Input> for CoChain<F, L>
             }
         }
     }
+}
+
+trait Chain<L, Input>
+    where L: Coroutine<Input>,
+          Self: Sized + Coroutine<Input, Return = Input>
+{
+    fn chain(self, l: L) -> CoChain<Self, L> {
+        CoChain::Former(self, l)
+    }
+}
+
+impl<F, L, Input> Chain<L, Input> for F
+    where F: Coroutine<Input, Return = Input>,
+          L: Coroutine<Input>
+{
 }

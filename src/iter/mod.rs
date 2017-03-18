@@ -1,5 +1,5 @@
-mod iterator;
-mod iterwrapper;
+mod iterate;
+mod wrap;
 
-pub use self::iterator::*;
-pub use self::iterwrapper::*;
+pub use self::iterate::*;
+pub use self::wrap::*;
