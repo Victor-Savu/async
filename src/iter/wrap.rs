@@ -1,6 +1,6 @@
 use co::{Coroutine, CoResult};
 
-struct CoWrap<T>(T);
+pub struct CoWrap<T>(T);
 
 impl<Iter> Coroutine<()> for CoWrap<Iter> where Iter: Iterator {
     type Yield = Iter::Item;
@@ -15,7 +15,7 @@ impl<Iter> Coroutine<()> for CoWrap<Iter> where Iter: Iterator {
     }
 }
 
-trait Wrap<I>
+pub trait Wrap<I>
     where I: Iterator,
           Self: Sized
 {

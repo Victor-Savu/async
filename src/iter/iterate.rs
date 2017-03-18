@@ -23,7 +23,7 @@ impl<C> Iterator for CoIterate<C>
     }
 }
 
-trait Iterate<C>
+pub trait Iterate<C>
     where C: Coroutine<()>,
           Self: Sized
 {

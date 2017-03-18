@@ -30,7 +30,7 @@ impl<F, L, Input> Coroutine<Input> for CoChain<F, L>
     }
 }
 
-trait Chain<L, Input>
+pub trait Chain<L, Input>
     where L: Coroutine<Input>,
           Self: Sized + Coroutine<Input, Return = Input>
 {
