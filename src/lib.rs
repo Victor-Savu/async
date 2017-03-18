@@ -3,3 +3,4 @@
 pub mod co;
 pub mod comb;
 pub mod iter;
+pub mod map;
