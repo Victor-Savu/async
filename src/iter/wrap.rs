@@ -2,13 +2,13 @@ use co::{Coroutine, CoResult};
 
 pub struct CoWrap<T>(T);
 
-impl<Iter> Coroutine<()> for CoWrap<Iter>
+impl<Iter> Coroutine for CoWrap<Iter>
     where Iter: Iterator
 {
     type Yield = Iter::Item;
     type Return = Iter;
 
-    fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+    fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
         let mut i = self.0;
         match i.next() {
             Some(item) => CoResult::Yield(item, CoWrap(i)),

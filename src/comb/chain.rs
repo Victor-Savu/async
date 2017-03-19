@@ -1,48 +1,78 @@
 use co::{Coroutine, CoResult};
 
-pub enum CoChain<F, L> {
-    Former(F, L),
-    Latter(L),
+pub enum CoState<C>
+    where C: Coroutine
+{
+    Live(C),
+    Done(C::Return),
 }
 
-impl<F, L, Input> Coroutine<Input> for CoChain<F, L>
-    where F: Coroutine<Input>,
-          L: Coroutine<Input>,
-          Input: From<<F as Coroutine<Input>>::Return>,
-          <F as Coroutine<Input>>::Yield: From<<L as Coroutine<Input>>::Yield>
+pub struct CoChain<F, L>
+    where F: Coroutine
 {
-    type Yield = <F as Coroutine<Input>>::Yield;
-    type Return = <L as Coroutine<Input>>::Return;
+    former: CoState<F>,
+    latter: L,
+}
 
-    fn next(self, i: Input) -> CoResult<Self::Yield, Self, Self::Return> {
-        match self {
-            CoChain::Former(fmr, ltr) => {
-                match fmr.next(i) {
-                    CoResult::Yield(y, fmr) => CoResult::Yield(y, fmr.chain(ltr)),
-                    CoResult::Return(retf) => CoChain::Latter(ltr).next(retf.into()),
+impl<F, L> Coroutine for CoChain<F, L>
+    where F: Coroutine,
+          L: Coroutine,
+          F::Yield: From<L::Yield>
+{
+    type Yield = F::Yield;
+    type Return = (F::Return, L::Return);
+
+    fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+        match self.former {
+            CoState::Live(former) => {
+                match former.next() {
+                    CoResult::Yield(y, fmr) => CoResult::Yield(y, fmr.chain(self.latter)),
+                    CoResult::Return(retf) => {
+                        CoChain {
+                                former: CoState::Done(retf),
+                                latter: self.latter,
+                            }
+                            .next()
+                    }
                 }
             }
-            CoChain::Latter(ltr) => {
-                match ltr.next(i) {
-                    CoResult::Yield(y, ltr) => CoResult::Yield(y.into(), CoChain::Latter(ltr)),
-                    CoResult::Return(retl) => CoResult::Return(retl),
+            CoState::Done(result) => {
+                match self.latter.next() {
+                    CoResult::Yield(y, ltr) => {
+                        CoResult::Yield(y.into(),
+                                        CoChain {
+                                            former: CoState::Done(result),
+                                            latter: ltr,
+                                        })
+                    }
+                    CoResult::Return(retl) => CoResult::Return((result, retl)),
                 }
             }
         }
     }
 }
 
-pub trait Chain<L, Input>: Sized {
-    fn chain(self, l: L) -> CoChain<Self, L> {
-        CoChain::Former(self, l)
-    }
+pub trait Chain {
+    type Former: Coroutine;
+
+    fn chain<L>(self, l: L) -> CoChain<Self::Former, L>
+        where L: Coroutine,
+              <<Self as Chain>::Former as Coroutine>::Yield: From<L::Yield>;
 }
 
-impl<F, L, Input> Chain<L, Input> for F
-    where F: Coroutine<Input>,
-          L: Coroutine<Input>,
-          Input: From<<F as Coroutine<Input>>::Return>
+impl<F> Chain for F
+    where F: Coroutine
 {
+    type Former = Self;
+    fn chain<L>(self, l: L) -> CoChain<Self::Former, L>
+        where L: Coroutine,
+              <<Self as Chain>::Former as Coroutine>::Yield: From<L::Yield>
+    {
+        CoChain {
+            former: CoState::Live(self),
+            latter: l,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -54,11 +84,11 @@ mod tests {
         lim: T,
     }
 
-    impl Coroutine<()> for Counter<i64> {
+    impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = ();
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {

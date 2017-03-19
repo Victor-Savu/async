@@ -5,11 +5,11 @@ pub enum CoResult<YieldT, CoroT, ReturnT> {
     Return(ReturnT),
 }
 
-pub trait Coroutine<Input>: Sized {
+pub trait Coroutine: Sized {
     type Yield;
     type Return;
 
-    fn next(self, i: Input) -> CoResult<Self::Yield, Self, Self::Return>;
+    fn next(self) -> CoResult<Self::Yield, Self, Self::Return>;
 }
 
 #[macro_export]
@@ -25,7 +25,7 @@ macro_rules! each {
         let fin;
         'outer: loop {
             loop {
-                match iter_.next(()) {
+                match iter_.next() {
                     CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
@@ -54,7 +54,7 @@ macro_rules! each {
         let fin;
         'outer: loop {
             loop {
-                match iter_.next(()) {
+                match iter_.next() {
                     CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
@@ -87,7 +87,7 @@ macro_rules! each {
         let fin;
         'outer: loop {
             loop {
-                match iter_.next(()) {
+                match iter_.next() {
                     CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
@@ -116,7 +116,7 @@ macro_rules! each {
         let fin;
         'outer: loop {
             loop {
-                match iter_.next(()) {
+                match iter_.next() {
                     CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
@@ -148,7 +148,7 @@ macro_rules! each {
         'outer: loop {
             loop {
                 #[allow(unreachable_patterns, unreachable_code)] // if $iter::Return is !
-                match iter_.next(()) {
+                match iter_.next() {
                     CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
@@ -174,7 +174,7 @@ macro_rules! each {
         let mut iter_ = $iter;
         let fin;
         loop {
-            match iter_.next(()) {
+            match iter_.next() {
                 CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
@@ -202,11 +202,11 @@ mod tests {
         lim: T,
     }
 
-    impl Coroutine<()> for Counter<i64> {
+    impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = &'static str;
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {
@@ -223,11 +223,11 @@ mod tests {
         i: T,
     }
 
-    impl Coroutine<()> for InfiniteCounter<i64> {
+    impl Coroutine for InfiniteCounter<i64> {
         type Yield = i64;
         type Return = !;
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
         }
     }
@@ -275,11 +275,11 @@ mod tests {
             lim: T,
         }
 
-        impl Coroutine<()> for Blabber<i64> {
+        impl Coroutine for Blabber<i64> {
             type Yield = (i64, i64);
             type Return = (&'static str, i64);
 
-            fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+            fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
                 if self.i < self.lim {
                     CoResult::Yield((self.i, self.lim),
                                     Blabber {

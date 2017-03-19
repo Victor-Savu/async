@@ -3,14 +3,14 @@ use co::{Coroutine, CoResult};
 pub struct CoIterate<C>(Option<C>);
 
 impl<C> Iterator for CoIterate<C>
-    where C: Coroutine<()>
+    where C: Coroutine
 {
     type Item = C::Yield;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.0.take() {
             Some(coro) => {
-                match coro.next(()) {
+                match coro.next() {
                     CoResult::Yield(i, cnt) => {
                         self.0 = Some(cnt);
                         Some(i)
@@ -30,7 +30,7 @@ pub trait Iterate<C>: Sized
     }
 }
 
-impl<C> Iterate<C> for C where C: Coroutine<()> {}
+impl<C> Iterate<C> for C where C: Coroutine {}
 
 #[cfg(test)]
 mod tests {
@@ -41,11 +41,11 @@ mod tests {
         lim: T,
     }
 
-    impl Coroutine<()> for Counter<i64> {
+    impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = &'static str;
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {
@@ -62,11 +62,11 @@ mod tests {
         i: T,
     }
 
-    impl Coroutine<()> for InfiniteCounter<i64> {
+    impl Coroutine for InfiniteCounter<i64> {
         type Yield = i64;
         type Return = !;
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
         }
     }

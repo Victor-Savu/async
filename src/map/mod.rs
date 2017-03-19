@@ -1,4 +1,3 @@
-pub mod arg;
 pub mod yld;
 pub mod ret;
 
@@ -16,11 +15,11 @@ mod tests {
         lim: T,
     }
 
-    impl Coroutine<()> for Counter<i64> {
+    impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = &'static str;
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {
@@ -37,11 +36,11 @@ mod tests {
         i: T,
     }
 
-    impl Coroutine<()> for InfiniteCounter<i64> {
+    impl Coroutine for InfiniteCounter<i64> {
         type Yield = i64;
         type Return = !;
 
-        fn next(self, _: ()) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
         }
     }
