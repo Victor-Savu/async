@@ -1,9 +1,8 @@
-# `each` and Other async stuff
-[![Build Status](https://travis-ci.org/Victor-Savu/each_other.svg?branch=master)](https://travis-ci.org/Victor-Savu/each\_other)
+# Out of Order (o3) -- Async Primitives
+[![Build Status](https://travis-ci.org/Victor-Savu/o3.svg?branch=master)](https://travis-ci.org/Victor-Savu/o3)
 
-The `each_other` library proposes a new take on iterators as coroutines and
-allows developers to more closely express their designs using the Rust type
-system.
+This crate proposes a new take on iterators as coroutines and allows developers
+to more closely express their designs using the Rust type system.
 
 # LICENSE
 
