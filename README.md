@@ -1,5 +1,5 @@
 # `each` and Other async stuff
-![travis](https://travis-ci.org/Victor-Savu/each_other.svg?branch=master)
+[![Build Status](https://travis-ci.org/Victor-Savu/each_other.svg?branch=master)](https://travis-ci.org/Victor-Savu/each\_other)
 
 The `each_other` library proposes a new take on iterators as coroutines and
 allows developers to more closely express their designs using the Rust type
