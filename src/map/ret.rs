@@ -10,7 +10,7 @@ impl<C, F, Output> Coroutine for CoMapReturn<C, F>
     type Yield = C::Yield;
     type Return = Output;
 
-    fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+    fn next(self) -> CoResult<Self> {
         match self.0.c.next() {
             CoResult::Yield(y, c) => CoResult::Yield(y, c.map_return(self.0.f)),
             CoResult::Return(res) => CoResult::Return((self.0.f)(res)),

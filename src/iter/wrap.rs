@@ -8,7 +8,7 @@ impl<Iter> Coroutine for CoWrap<Iter>
     type Yield = Iter::Item;
     type Return = Iter;
 
-    fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+    fn next(self) -> CoResult<Self> {
         let mut i = self.0;
         match i.next() {
             Some(item) => CoResult::Yield(item, CoWrap(i)),
@@ -17,8 +17,7 @@ impl<Iter> Coroutine for CoWrap<Iter>
     }
 }
 
-pub trait Wrap<I>: Sized
-{
+pub trait Wrap<I>: Sized {
     fn wrap(self) -> CoWrap<Self> {
         CoWrap(self)
     }

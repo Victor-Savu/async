@@ -1,15 +1,17 @@
 #![macro_use]
 
-pub enum CoResult<YieldT, CoroT, ReturnT> {
-    Yield(YieldT, CoroT),
-    Return(ReturnT),
+pub enum CoResult<Coro>
+    where Coro: Coroutine
+{
+    Yield(Coro::Yield, Coro),
+    Return(Coro::Return),
 }
 
 pub trait Coroutine: Sized {
     type Yield;
     type Return;
 
-    fn next(self) -> CoResult<Self::Yield, Self, Self::Return>;
+    fn next(self) -> CoResult<Self>;
 }
 
 #[macro_export]
@@ -206,7 +208,7 @@ mod tests {
         type Yield = i64;
         type Return = &'static str;
 
-        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {
@@ -227,7 +229,7 @@ mod tests {
         type Yield = i64;
         type Return = !;
 
-        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
         }
     }
@@ -279,7 +281,7 @@ mod tests {
             type Yield = (i64, i64);
             type Return = (&'static str, i64);
 
-            fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+            fn next(self) -> CoResult<Self> {
                 if self.i < self.lim {
                     CoResult::Yield((self.i, self.lim),
                                     Blabber {
@@ -327,7 +329,7 @@ mod tests {
         assert_eq!(cnt, 10);
         assert_eq!(message, "At last!");
     }
-    
+
     #[test]
     fn no_else() {
         let bart = Counter::<i64> { i: 3, lim: 10 };

@@ -19,7 +19,7 @@ mod tests {
         type Yield = i64;
         type Return = &'static str;
 
-        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {
@@ -40,7 +40,7 @@ mod tests {
         type Yield = i64;
         type Return = !;
 
-        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
         }
     }

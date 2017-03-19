@@ -22,7 +22,7 @@ impl<F, L> Coroutine for CoChain<F, L>
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
 
-    fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+    fn next(self) -> CoResult<Self> {
         match self.former {
             CoState::Live(former) => {
                 match former.next() {
@@ -88,7 +88,7 @@ mod tests {
         type Yield = i64;
         type Return = ();
 
-        fn next(self) -> CoResult<Self::Yield, Self, Self::Return> {
+        fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
                 CoResult::Yield(self.i,
                                 Counter {
