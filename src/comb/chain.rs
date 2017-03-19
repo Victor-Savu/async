@@ -1,11 +1,4 @@
-use co::{Coroutine, CoResult};
-
-pub enum CoState<C>
-    where C: Coroutine
-{
-    Live(C),
-    Done(C::Return),
-}
+use co::{Coroutine, CoResult, CoState};
 
 pub struct CoChain<F, L>
     where F: Coroutine
