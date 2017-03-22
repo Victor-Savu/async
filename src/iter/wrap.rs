@@ -7,6 +7,7 @@ impl<Iter> Coroutine for CoWrap<Iter>
 {
     type Yield = Iter::Item;
     type Return = Iter;
+    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         let mut i = self.0;

@@ -9,6 +9,7 @@ impl<C, F, Output> Coroutine for CoMapReturn<C, F>
 {
     type Yield = C::Yield;
     type Return = Output;
+    type Continue = CoMapReturn<C::Continue, F>;
 
     fn next(self) -> CoResult<Self> {
         match self.0.c.next() {

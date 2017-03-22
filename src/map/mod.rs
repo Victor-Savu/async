@@ -18,6 +18,7 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = &'static str;
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
@@ -39,6 +40,7 @@ mod tests {
     impl Coroutine for InfiniteCounter<i64> {
         type Yield = i64;
         type Return = !;
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })

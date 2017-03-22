@@ -3,13 +3,14 @@
 pub enum CoResult<Coro>
     where Coro: Coroutine
 {
-    Yield(Coro::Yield, Coro),
+    Yield(Coro::Yield, Coro::Continue),
     Return(Coro::Return),
 }
 
 pub trait Coroutine: Sized {
     type Yield;
     type Return;
+    type Continue: Coroutine<Yield=Self::Yield, Return=Self::Return>;
 
     fn next(self) -> CoResult<Self>;
 }
@@ -201,7 +202,6 @@ macro_rules! each {
     }};
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,6 +214,7 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = &'static str;
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
@@ -235,6 +236,7 @@ mod tests {
     impl Coroutine for InfiniteCounter<i64> {
         type Yield = i64;
         type Return = !;
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })
@@ -287,6 +289,7 @@ mod tests {
         impl Coroutine for Blabber<i64> {
             type Yield = (i64, i64);
             type Return = (&'static str, i64);
+            type Continue = Self;
 
             fn next(self) -> CoResult<Self> {
                 if self.i < self.lim {

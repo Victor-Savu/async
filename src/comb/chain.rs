@@ -10,16 +10,22 @@ pub struct CoChain<F, L>
 impl<F, L> Coroutine for CoChain<F, L>
     where F: Coroutine,
           L: Coroutine,
-          F::Yield: From<L::Yield>
+          F::Yield: From<L::Yield>,
+          F: From<<F as Coroutine>::Continue>,
+          L: From<<L as Coroutine>::Continue>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
+    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.former {
             CoState::Live(former) => {
                 match former.next() {
-                    CoResult::Yield(y, fmr) => CoResult::Yield(y, fmr.chain(self.latter)),
+                    CoResult::Yield(y, fmr) => {
+                        let f: F = fmr.into();
+                        CoResult::Yield(y, f.chain(self.latter))
+                    },
                     CoResult::Return(retf) => {
                         CoChain {
                                 former: CoState::Done(retf),
@@ -35,7 +41,7 @@ impl<F, L> Coroutine for CoChain<F, L>
                         CoResult::Yield(y.into(),
                                         CoChain {
                                             former: CoState::Done(result),
-                                            latter: ltr,
+                                            latter: ltr.into(),
                                         })
                     }
                     CoResult::Return(retl) => CoResult::Return((result, retl)),
@@ -80,6 +86,7 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = ();
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
