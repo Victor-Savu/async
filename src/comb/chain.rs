@@ -1,13 +1,16 @@
-/*
 use map::ret::MapReturn;
 use co::Coroutine;
 use join::Join;
 
 
-pub trait Chain {
-    fn chain<L>(self, l: L) -> impl Chain
-        where L: Coroutine,
-              <Self as Coroutine>::Yield: From<L::Yield>;
+/*
+pub trait Chain
+    where Self: Coroutine
+{
+    fn chain<L: Coroutine<Yield = Self::Yield>>
+        (self,
+         l: L)
+         -> impl Chain<Yield = Self::Yield, Return = (Self::Return, L::Return)>;
 }
 
 impl<F> Chain for F
@@ -20,19 +23,23 @@ impl<F> Chain for F
         self.map_return(|res_f| l.map_return(|res_l| (res_f, res_l))).join()
     }
 }
-pub fn chain<F: Coroutine<Continue=F>, L: Coroutine<Continue=L, Yield=F::Yield>>(f: F, l: L) -> impl Coroutine<Yield=F::Yield, Return=(F::Return, L::Return)>
-{
+*/
+pub fn chain<F: Coroutine, L: Coroutine<Yield = F::Yield>>
+    (f: F,
+     l: L)
+     -> impl Coroutine<Yield = F::Yield, Return = (F::Return, L::Return)> {
     f.map_return(move |res_f| l.map_return(move |res_l| (res_f, res_l))).join()
 }
-*/
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
     use co::CoResult;
+    /*
     use map::ret::MapReturn;
     use co::Coroutine;
     use join::Join;
+    */
 
     struct Counter<T> {
         i: T,
@@ -42,7 +49,6 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = ();
-        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
@@ -62,8 +68,8 @@ mod tests {
         let first = Counter::<i64> { i: 1, lim: 9 };
         let second = Counter::<i64> { i: 1, lim: 3 };
 
-        // let the_chain = chain(first, second);
-        let the_chain = first.map_return(move |res_f| second.map_return(move |res_l| (res_f, res_l))).join();
+        let the_chain = chain(first, second);
+        // let the_chain = first.map_return(move |res_f| second.map_return(move |res_l| (res_f, res_l))).join();
         let msg = "This is the end";
         let mut elem = 1;
         let message = each!(the_chain => i in {

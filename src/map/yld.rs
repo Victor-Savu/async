@@ -9,7 +9,6 @@ impl<C, F, Output> Coroutine for CoMapYield<C, F>
 {
     type Yield = Output;
     type Return = C::Return;
-    type Continue = CoMapYield<C::Continue, F>;
 
     fn next(self) -> CoResult<Self> {
         let mut f = self.0.f;

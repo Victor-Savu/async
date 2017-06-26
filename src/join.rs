@@ -10,30 +10,22 @@ pub enum CoJoin<C>
 impl<C> Coroutine for CoJoin<C>
     where C: Coroutine,
           C::Return: Coroutine,
-          C::Yield: From<<C::Return as Coroutine>::Yield>,
-          C: From<<C as Coroutine>::Continue>,
-          C::Return: From<<C::Return as Coroutine>::Continue>
+          C::Yield: From<<C::Return as Coroutine>::Yield>
 {
     type Yield = C::Yield;
     type Return = <C::Return as Coroutine>::Return;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self {
             CoJoin::Outer(c) => {
                 match c.next() {
-                    CoResult::Yield(y, outer) => {
-                        let f: C = outer.into();
-                        CoResult::Yield(y, f.join())
-                    }
+                    CoResult::Yield(y, outer) => CoResult::Yield(y, outer.join()),
                     CoResult::Return(inner) => CoJoin::Inner(inner).next(),
                 }
             }
             CoJoin::Inner(c) => {
                 match c.next() {
-                    CoResult::Yield(y, inner) => {
-                        CoResult::Yield(y.into(), CoJoin::Inner(inner.into()))
-                    }
+                    CoResult::Yield(y, inner) => CoResult::Yield(y.into(), CoJoin::Inner(inner)),
                     CoResult::Return(result) => CoResult::Return(result),
                 }
             }
@@ -45,9 +37,7 @@ pub trait Join: Sized {
     fn join(self) -> CoJoin<Self>
         where Self: Coroutine,
               Self::Return: Coroutine,
-              Self::Yield: From<<Self::Return as Coroutine>::Yield>,
-              Self: From<<Self as Coroutine>::Continue>,
-              Self::Return: From<<Self::Return as Coroutine>::Continue>
+              Self::Yield: From<<Self::Return as Coroutine>::Yield>
     {
         CoJoin::Outer(self)
     }
@@ -56,9 +46,7 @@ pub trait Join: Sized {
 impl<C> Join for C
     where C: Coroutine,
           C::Return: Coroutine,
-          C::Yield: From<<C::Return as Coroutine>::Yield>,
-          C: From<<C as Coroutine>::Continue>,
-          C::Return: From<<C::Return as Coroutine>::Continue>
+          C::Yield: From<<C::Return as Coroutine>::Yield>
 {
 }
 
@@ -75,7 +63,6 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = ();
-        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
