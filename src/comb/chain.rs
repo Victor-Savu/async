@@ -1,82 +1,38 @@
-use co::{Coroutine, CoResult, CoState};
+/*
+use map::ret::MapReturn;
+use co::Coroutine;
+use join::Join;
 
-pub struct CoChain<F, L>
-    where F: Coroutine
-{
-    former: CoState<F>,
-    latter: L,
-}
-
-impl<F, L> Coroutine for CoChain<F, L>
-    where F: Coroutine,
-          L: Coroutine,
-          F::Yield: From<L::Yield>,
-          F: From<<F as Coroutine>::Continue>,
-          L: From<<L as Coroutine>::Continue>
-{
-    type Yield = F::Yield;
-    type Return = (F::Return, L::Return);
-    type Continue = Self;
-
-    fn next(self) -> CoResult<Self> {
-        match self.former {
-            CoState::Live(former) => {
-                match former.next() {
-                    CoResult::Yield(y, fmr) => {
-                        let f: F = fmr.into();
-                        CoResult::Yield(y, f.chain(self.latter))
-                    },
-                    CoResult::Return(retf) => {
-                        CoChain {
-                                former: CoState::Done(retf),
-                                latter: self.latter,
-                            }
-                            .next()
-                    }
-                }
-            }
-            CoState::Done(result) => {
-                match self.latter.next() {
-                    CoResult::Yield(y, ltr) => {
-                        CoResult::Yield(y.into(),
-                                        CoChain {
-                                            former: CoState::Done(result),
-                                            latter: ltr.into(),
-                                        })
-                    }
-                    CoResult::Return(retl) => CoResult::Return((result, retl)),
-                }
-            }
-        }
-    }
-}
 
 pub trait Chain {
-    type Former: Coroutine;
-
-    fn chain<L>(self, l: L) -> CoChain<Self::Former, L>
+    fn chain<L>(self, l: L) -> impl Chain
         where L: Coroutine,
-              <<Self as Chain>::Former as Coroutine>::Yield: From<L::Yield>;
+              <Self as Coroutine>::Yield: From<L::Yield>;
 }
 
 impl<F> Chain for F
     where F: Coroutine
 {
-    type Former = Self;
-    fn chain<L>(self, l: L) -> CoChain<Self::Former, L>
+    fn chain<L>(self, l: L) -> impl Chain
         where L: Coroutine,
-              <<Self as Chain>::Former as Coroutine>::Yield: From<L::Yield>
+              <Self as Coroutine>::Yield: From<L::Yield>
     {
-        CoChain {
-            former: CoState::Live(self),
-            latter: l,
-        }
+        self.map_return(|res_f| l.map_return(|res_l| (res_f, res_l))).join()
     }
 }
+pub fn chain<F: Coroutine<Continue=F>, L: Coroutine<Continue=L, Yield=F::Yield>>(f: F, l: L) -> impl Coroutine<Yield=F::Yield, Return=(F::Return, L::Return)>
+{
+    f.map_return(move |res_f| l.map_return(move |res_l| (res_f, res_l))).join()
+}
+*/
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
+    use co::CoResult;
+    use map::ret::MapReturn;
+    use co::Coroutine;
+    use join::Join;
 
     struct Counter<T> {
         i: T,
@@ -106,10 +62,11 @@ mod tests {
         let first = Counter::<i64> { i: 1, lim: 9 };
         let second = Counter::<i64> { i: 1, lim: 3 };
 
-        let chain = first.chain(second);
+        // let the_chain = chain(first, second);
+        let the_chain = first.map_return(move |res_f| second.map_return(move |res_l| (res_f, res_l))).join();
         let msg = "This is the end";
         let mut elem = 1;
-        let message = each!(chain => i in {
+        let message = each!(the_chain => i in {
             assert_eq!(i, elem);
             elem = if elem == 8 { 1 } else { elem + 1 };
         } then {
