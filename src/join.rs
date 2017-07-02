@@ -8,12 +8,13 @@ pub enum CoJoin<C>
 }
 
 impl<C> Coroutine for CoJoin<C>
-    where C: Coroutine,
-          C::Return: Coroutine,
+    where C: Coroutine<Continue=C>,
+          C::Return: Coroutine<Continue=C::Return>,
           C::Yield: From<<C::Return as Coroutine>::Yield>
 {
     type Yield = C::Yield;
     type Return = <C::Return as Coroutine>::Return;
+    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self {
@@ -63,6 +64,7 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = ();
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {

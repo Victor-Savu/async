@@ -3,7 +3,7 @@ use co::{Coroutine, CoResult};
 pub struct CoIterate<C>(Option<C>);
 
 impl<C> Iterator for CoIterate<C>
-    where C: Coroutine
+    where C: Coroutine<Continue=C>
 {
     type Item = C::Yield;
 
@@ -43,6 +43,7 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = &'static str;
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {
@@ -64,6 +65,7 @@ mod tests {
     impl Coroutine for InfiniteCounter<i64> {
         type Yield = i64;
         type Return = !;
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             CoResult::Yield(self.i, InfiniteCounter { i: self.i + 1 })

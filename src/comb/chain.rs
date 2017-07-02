@@ -40,15 +40,16 @@ impl<I, F> FnOnce<(I,)> for PrependToReturn<F>
 }
 
 pub struct CoChain<F, L>(CoJoin<CoMapReturn<F, PrependToReturn<L>>>)
-    where F: Coroutine,
+    where F: Coroutine<Continue = F>,
           L: Coroutine<Yield = F::Yield>;
 
 impl<F, L> Coroutine for CoChain<F, L>
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>
+    where F: Coroutine<Continue = F>,
+          L: Coroutine<Yield = F::Yield, Continue=L>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
+    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.0.next() {
@@ -59,16 +60,16 @@ impl<F, L> Coroutine for CoChain<F, L>
 }
 
 pub trait Chain
-    where Self: Coroutine
+    where Self: Coroutine<Continue = Self>
 {
-    fn chain<L>(self, l: L) -> CoChain<Self, L> where L: Coroutine<Yield = Self::Yield>;
+    fn chain<L>(self, l: L) -> CoChain<Self, L> where L: Coroutine<Yield = Self::Yield, Continue = L>;
 }
 
 impl<F> Chain for F
-    where F: Coroutine
+    where F: Coroutine<Continue = Self>
 {
     fn chain<L>(self, l: L) -> CoChain<F, L>
-        where L: Coroutine<Yield = F::Yield>
+        where L: Coroutine<Yield = F::Yield, Continue = L>
     {
         CoChain(self.map_return(PrependToReturn::new(l)).join())
     }
@@ -88,6 +89,7 @@ mod tests {
     impl Coroutine for Counter<i64> {
         type Yield = i64;
         type Return = ();
+        type Continue = Self;
 
         fn next(self) -> CoResult<Self> {
             if self.i < self.lim {

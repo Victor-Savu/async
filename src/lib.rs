@@ -8,3 +8,6 @@ pub mod comb;
 pub mod iter;
 pub mod map;
 pub mod join;
+pub mod either;
+pub mod all;
+pub mod race;
