@@ -3,11 +3,11 @@ use map::CoMap;
 
 pub struct CoMapYield<C, F>(CoMap<C, F>);
 
-impl<C, F, Output> Coroutine for CoMapYield<C, F>
+impl<C, F> Coroutine for CoMapYield<C, F>
     where C: Coroutine<Continue = C>,
-          F: FnMut(C::Yield) -> Output
+          F: FnMut<(C::Yield,)>
 {
-    type Yield = Output;
+    type Yield = F::Output;
     type Return = C::Return;
     type Continue = CoMapYield<C, F>;
 
@@ -20,14 +20,14 @@ impl<C, F, Output> Coroutine for CoMapYield<C, F>
     }
 }
 
-pub trait MapYield<F, Output>: Sized {
+pub trait MapYield<F>: Sized {
     fn map_yield(self, f: F) -> CoMapYield<Self, F> {
         CoMapYield(CoMap { c: self, f: f })
     }
 }
 
-impl<C, F, Output> MapYield<F, Output> for C
+impl<C, F> MapYield<F> for C
     where C: Coroutine,
-          F: FnOnce(C::Yield) -> Output
+          F: FnOnce<(C::Yield,)>
 {
 }

@@ -3,12 +3,12 @@ use map::CoMap;
 
 pub struct CoMapReturn<C, F>(CoMap<C, F>);
 
-impl<C, F, Output> Coroutine for CoMapReturn<C, F>
+impl<C, F> Coroutine for CoMapReturn<C, F>
     where C: Coroutine<Continue = C>,
-          F: FnOnce(C::Return) -> Output
+          F: FnOnce<(C::Return,)>
 {
     type Yield = C::Yield;
-    type Return = Output;
+    type Return = F::Output;
     type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
@@ -19,14 +19,14 @@ impl<C, F, Output> Coroutine for CoMapReturn<C, F>
     }
 }
 
-pub trait MapReturn<F, Output>: Sized {
+pub trait MapReturn<F>: Sized {
     fn map_return(self, f: F) -> CoMapReturn<Self, F> {
         CoMapReturn(CoMap { c: self, f: f })
     }
 }
 
-impl<C, F, Output> MapReturn<F, Output> for C
+impl<C, F> MapReturn<F> for C
     where C: Coroutine,
-          F: FnOnce(C::Return) -> Output
+          F: FnOnce<(C::Return,)>
 {
 }
