@@ -15,13 +15,6 @@ pub trait Coroutine: Sized {
     fn next(self) -> CoResult<Self>;
 }
 
-pub enum CoState<C>
-    where C: Coroutine
-{
-    Live(C),
-    Done(C::Return),
-}
-
 #[macro_export]
 macro_rules! each {
     // full_each
