@@ -3,7 +3,7 @@ extern crate o3;
 
 use o3::iter::wrap::Wrap;
 use o3::map::ret::MapReturn;
-use o3::race::Race;
+use o3::comb::race::Race;
 use o3::either::Either;
 
 #[test]

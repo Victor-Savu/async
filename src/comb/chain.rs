@@ -1,54 +1,20 @@
 use map::ret::{MapReturn, CoMapReturn};
 use co::{Coroutine, CoResult};
-use join::{Join, CoJoin};
+use comb::join::{Join, CoJoin};
 
 
-pub struct Prepend<F>(F);
-
-impl<F> Prepend<F> {
-    pub fn new(f: F) -> Self {
-        Prepend(f)
-    }
-}
-
-impl<I, F> FnOnce<(I,)> for Prepend<F> {
-    type Output = (F, I);
-
-    extern "rust-call" fn call_once(self, (i,): (I,)) -> Self::Output {
-        (self.0, i)
-    }
-}
-
-pub struct PrependToReturn<F>(F) where F: Coroutine;
-
-impl<F> PrependToReturn<F>
-    where F: Coroutine
-{
-    pub fn new(f: F) -> Self {
-        PrependToReturn(f)
-    }
-}
-
-impl<I, F> FnOnce<(I,)> for PrependToReturn<F>
-    where F: Coroutine
-{
-    type Output = CoMapReturn<F, Prepend<I>>;
-
-    extern "rust-call" fn call_once(self, (i,): (I,)) -> Self::Output {
-        self.0.map_return(Prepend::new(i))
-    }
-}
-
-pub struct CoChain<F, L>(CoJoin<CoMapReturn<F, PrependToReturn<L>>>)
+pub struct CoChain<F, L>(CoJoin<CoMapReturn<F, L>>)
     where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield>;
+          L: FnOnce<(F::Return,)>,
+          L::Output: Coroutine<Yield = F::Yield, Continue = L::Output>;
 
 impl<F, L> Coroutine for CoChain<F, L>
     where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield, Continue=L>
+          L: FnOnce<(F::Return,)>,
+          L::Output: Coroutine<Yield = F::Yield, Continue = L::Output>
 {
     type Yield = F::Yield;
-    type Return = (F::Return, L::Return);
+    type Return = <L::Output as Coroutine>::Return;
     type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
@@ -59,19 +25,21 @@ impl<F, L> Coroutine for CoChain<F, L>
     }
 }
 
-pub trait Chain
-    where Self: Coroutine<Continue = Self>
+pub trait Chain: Coroutine<Continue = Self>
 {
-    fn chain<L>(self, l: L) -> CoChain<Self, L> where L: Coroutine<Yield = Self::Yield, Continue = L>;
+    fn chain<L>(self, l: L) -> CoChain<Self, L>
+        where L: FnOnce<(Self::Return,)>,
+              L::Output: Coroutine<Yield = Self::Yield, Continue = L::Output>;
 }
 
 impl<F> Chain for F
     where F: Coroutine<Continue = Self>
 {
     fn chain<L>(self, l: L) -> CoChain<F, L>
-        where L: Coroutine<Yield = F::Yield, Continue = L>
+        where L: FnOnce<(Self::Return,)>,
+              L::Output: Coroutine<Yield = Self::Yield, Continue = L::Output>
     {
-        CoChain(self.map_return(PrependToReturn::new(l)).join())
+        CoChain(self.map_return(l).join())
     }
 }
 
@@ -109,7 +77,7 @@ mod tests {
         let first = Counter::<i64> { i: 1, lim: 9 };
         let second = Counter::<i64> { i: 1, lim: 3 };
 
-        let the_chain = first.chain(second);
+        let the_chain = first.chain(|_| second);
         let msg = "This is the end";
         let mut elem = 1;
         let message = each!(the_chain => i in {

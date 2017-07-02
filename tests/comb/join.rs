@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate o3;
 
-use o3::join::Join;
+use o3::comb::join::Join;
 use o3::map::ret::MapReturn;
 use o3::iter::wrap::Wrap;
 
