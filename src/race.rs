@@ -4,7 +4,7 @@ use either::Either;
 
 pub struct CoRace<F, L>(Either<(F, L), (F, L)>)
     where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>;
+          L: Coroutine<Yield = F::Yield, Continue = L>;
 
 
 impl<F, L> Coroutine for CoRace<F, L>
@@ -37,7 +37,7 @@ pub trait Race
     where Self: Coroutine
 {
     fn race<L>(self, l: L) -> CoRace<Self, L>
-        where L: Coroutine<Yield = Self::Yield>
+        where L: Coroutine<Yield = Self::Yield, Continue = L>
     {
         CoRace(Either::Former((self, l)))
     }

@@ -31,19 +31,20 @@ macro_rules! each {
          $then_body:block
      else
          $else_body:block) => {{
+        use $crate::co::Coroutine;
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
             loop {
                 match iter_.next() {
-                    CoResult::Yield($elem, tail) => {
+                    $crate::co::CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
                             iter_ = tail;
                         }
                         $loop_body;
                     },
-                    CoResult::Return($then) => {
+                    $crate::co::CoResult::Return($then) => {
                         fin = $then_body;
                         break 'outer;
                     }
@@ -60,19 +61,20 @@ macro_rules! each {
          $loop_body:block
      then with $then:pat in
          $then_body:block) => {{
+        use $crate::co::Coroutine;
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
             loop {
                 match iter_.next() {
-                    CoResult::Yield($elem, tail) => {
+                    $crate::co::CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
                             iter_ = tail;
                         }
                         $loop_body;
                     },
-                    CoResult::Return($then) => {
+                    $crate::co::CoResult::Return($then) => {
                         fin = $then_body;
                         break 'outer;
                     }
@@ -93,19 +95,20 @@ macro_rules! each {
          $then_body:block
      else
          $else_body:block) => {{
+        use $crate::co::Coroutine;
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
             loop {
                 match iter_.next() {
-                    CoResult::Yield($elem, tail) => {
+                    $crate::co::CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
                             iter_ = tail;
                         }
                         $loop_body;
                     },
-                    CoResult::Return(_) => {
+                    $crate::co::CoResult::Return(_) => {
                         fin = $then_body;
                         break 'outer;
                     }
@@ -122,19 +125,20 @@ macro_rules! each {
          $loop_body:block
      then
          $then_body:block) => {{
+        use $crate::co::Coroutine;
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
             loop {
                 match iter_.next() {
-                    CoResult::Yield($elem, tail) => {
+                    $crate::co::CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
                             iter_ = tail;
                         }
                         $loop_body;
                     },
-                    CoResult::Return(_) => {
+                    $crate::co::CoResult::Return(_) => {
                         fin = $then_body;
                         break 'outer;
                     }
@@ -153,20 +157,21 @@ macro_rules! each {
          $loop_body:block
      else
          $else_body:block) => {{
+        use $crate::co::Coroutine;
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
             loop {
                 #[allow(unreachable_patterns, unreachable_code)] // if $iter::Return is !
                 match iter_.next() {
-                    CoResult::Yield($elem, tail) => {
+                    $crate::co::CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
                             iter_ = tail;
                         }
                         $loop_body;
                     },
-                    CoResult::Return(ret) => {
+                    $crate::co::CoResult::Return(ret) => {
                         fin = ret;
                         break 'outer;
                     }
@@ -181,18 +186,19 @@ macro_rules! each {
     // no_then_else
     ($iter:expr => $elem:pat in
          $loop_body:block) => {{
+        use $crate::co::Coroutine;
         let mut iter_ = $iter;
         let fin;
         loop {
             match iter_.next() {
-                CoResult::Yield($elem, tail) => {
+                $crate::co::CoResult::Yield($elem, tail) => {
                         #[allow(unused_assignments)] // if $loop_body contains a `break` statement
                         {
                             iter_ = tail;
                         }
                     $loop_body;
                 },
-                CoResult::Return(ret) => {
+                $crate::co::CoResult::Return(ret) => {
                     fin = ret;
                     break;
                 }
