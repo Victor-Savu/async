@@ -17,8 +17,8 @@ impl<F> Either<F, F> {
 
 
 impl<F, L> Coroutine for Either<F, L>
-    where F: Coroutine<Continue=F>,
-          L: Coroutine<Yield = F::Yield, Return = F::Return, Continue=L>
+    where F: Coroutine<Continue = F>,
+          L: Coroutine<Yield = F::Yield, Return = F::Return, Continue = L>
 {
     type Yield = F::Yield;
     type Return = F::Return;

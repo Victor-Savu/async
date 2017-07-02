@@ -25,8 +25,7 @@ impl<F, L> Coroutine for CoChain<F, L>
     }
 }
 
-pub trait Chain: Coroutine<Continue = Self>
-{
+pub trait Chain: Coroutine<Continue = Self> {
     fn chain<L>(self, l: L) -> CoChain<Self, L>
         where L: FnOnce<(Self::Return,)>,
               L::Output: Coroutine<Yield = Self::Yield, Continue = L::Output>;

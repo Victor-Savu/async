@@ -4,7 +4,7 @@ use map::CoMap;
 pub struct CoMapReturn<C, F>(CoMap<C, F>);
 
 impl<C, F, Output> Coroutine for CoMapReturn<C, F>
-    where C: Coroutine<Continue=C>,
+    where C: Coroutine<Continue = C>,
           F: FnOnce(C::Return) -> Output
 {
     type Yield = C::Yield;

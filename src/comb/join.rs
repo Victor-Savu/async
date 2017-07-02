@@ -8,8 +8,8 @@ pub enum CoJoin<C>
 }
 
 impl<C> Coroutine for CoJoin<C>
-    where C: Coroutine<Continue=C>,
-          C::Return: Coroutine<Continue=C::Return>,
+    where C: Coroutine<Continue = C>,
+          C::Return: Coroutine<Continue = C::Return>,
           C::Yield: From<<C::Return as Coroutine>::Yield>
 {
     type Yield = C::Yield;

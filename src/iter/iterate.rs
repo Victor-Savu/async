@@ -3,7 +3,7 @@ use co::{Coroutine, CoResult};
 pub struct CoIterate<C>(Option<C>);
 
 impl<C> Iterator for CoIterate<C>
-    where C: Coroutine<Continue=C>
+    where C: Coroutine<Continue = C>
 {
     type Item = C::Yield;
 
