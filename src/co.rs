@@ -49,6 +49,51 @@ macro_rules! each {
         fin
     }};
 
+    // no_body_no_else
+    ($iter:expr, $then:pat in
+         $then_body:block) => {{
+        use $crate::co::Coroutine;
+        let mut iter_ = $iter;
+        let fin;
+        'outer: loop {
+            match iter_.next() {
+                $crate::co::CoResult::Yield(_, tail) => {
+                    #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                    {
+                        iter_ = tail;
+                    }
+                },
+                $crate::co::CoResult::Return($then) => {
+                    fin = $then_body;
+                    break 'outer;
+                }
+            };
+        }
+        fin
+    }};
+
+    // jut_the_coroutine
+    ($iter:expr) => {{
+        use $crate::co::Coroutine;
+        let mut iter_ = $iter;
+        let fin;
+        'outer: loop {
+            match iter_.next() {
+                $crate::co::CoResult::Yield(_, tail) => {
+                    #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                    {
+                        iter_ = tail;
+                    }
+                },
+                $crate::co::CoResult::Return(ret) => {
+                    fin = ret;
+                    break 'outer;
+                }
+            };
+        }
+        fin
+    }};
+
     // no_else
     ($iter:expr => $elem:pat in
          $loop_body:block
@@ -58,25 +103,19 @@ macro_rules! each {
         let mut iter_ = $iter;
         let fin;
         'outer: loop {
-            loop {
-                match iter_.next() {
-                    $crate::co::CoResult::Yield($elem, tail) => {
-                        #[allow(unused_assignments)] // if $loop_body contains a `break` statement
-                        {
-                            iter_ = tail;
-                        }
-                        $loop_body;
-                    },
-                    $crate::co::CoResult::Return($then) => {
-                        fin = $then_body;
-                        break 'outer;
+            match iter_.next() {
+                $crate::co::CoResult::Yield($elem, tail) => {
+                    #[allow(unused_assignments)] // if $loop_body contains a `break` statement
+                    {
+                        iter_ = tail;
                     }
-                };
-            }
-            #[allow(unreachable_code)] // if $loop_body contains a `break` statement
-            {
-                break;
-            }
+                    $loop_body;
+                },
+                $crate::co::CoResult::Return($then) => {
+                    fin = $then_body;
+                    break 'outer;
+                }
+            };
         }
         fin
     }};
