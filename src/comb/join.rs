@@ -33,12 +33,12 @@ impl<C> Coroutine for CoJoin<C>
     }
 }
 
-pub trait Join: Sized {
-    fn join(self) -> CoJoin<Self>
-        where Self: Coroutine,
-              Self::Return: Coroutine,
-              Self::Yield: From<<Self::Return as Coroutine>::Yield>
-    {
+pub trait Join
+    where Self: Coroutine,
+          Self::Return: Coroutine,
+          Self::Yield: From<<Self::Return as Coroutine>::Yield>
+{
+    fn join(self) -> CoJoin<Self> {
         CoJoin::Outer(self)
     }
 }

@@ -17,14 +17,14 @@ impl<C, F> Coroutine for CoMapReturn<C, F>
     }
 }
 
-pub trait MapReturn<F>: Sized {
-    fn map_return(self, f: F) -> CoMapReturn<Self, F> {
+pub trait MapReturn
+    where Self: Coroutine
+{
+    fn map_return<F>(self, f: F) -> CoMapReturn<Self, F>
+        where F: FnOnce<(Self::Return,)>
+    {
         CoMapReturn(self, f)
     }
 }
 
-impl<C, F> MapReturn<F> for C
-    where C: Coroutine,
-          F: FnOnce<(C::Return,)>
-{
-}
+impl<C> MapReturn for C where C: Coroutine {}

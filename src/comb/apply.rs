@@ -21,6 +21,17 @@ pub struct CoApply<F, C>(CoMapReturn<CoAll<F, C>, ApplyFn<F::Return, C::Return>>
           F: Coroutine<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>;
 
+impl<F, C> CoApply<F, C>
+    where C: Coroutine,
+          F: Coroutine<Yield = C::Yield>,
+          F::Return: FnOnce<(C::Return,)>
+{
+    fn new(functor: F, c: C) -> Self
+    {
+        CoApply(functor.all(c).map_return(ApplyFn(PhantomData)))
+    }
+}
+
 impl<C, F> Coroutine for CoApply<F, C>
     where C: Coroutine,
           F: Coroutine<Yield = C::Yield>,
@@ -43,7 +54,7 @@ pub trait Apply<I>: Coroutine
     fn apply<C>(self, c: C) -> CoApply<Self, C>
         where C: Coroutine<Yield = Self::Yield, Return = I>
     {
-        CoApply(self.all(c).map_return(ApplyFn(PhantomData)))
+        CoApply::new(self, c)
     }
 }
 

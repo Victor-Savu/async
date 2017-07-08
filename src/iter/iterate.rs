@@ -23,10 +23,12 @@ impl<C> Iterator for CoIterate<C>
     }
 }
 
-pub trait Iterate<C>: Sized {
+pub trait Iterate
+    where Self: Sized
+{
     fn iterate(self) -> CoIterate<Self> {
         CoIterate(Some(self))
     }
 }
 
-impl<C> Iterate<C> for C where C: Coroutine {}
+impl<C> Iterate for C where C: Coroutine {}

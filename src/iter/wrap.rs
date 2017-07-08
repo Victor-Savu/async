@@ -1,6 +1,6 @@
 use co::{Coroutine, CoResult};
 
-pub struct CoWrap<T>(T);
+pub struct CoWrap<Iter>(Iter) where Iter: Iterator + Sized;
 
 impl<Iter> Coroutine for CoWrap<Iter>
     where Iter: Iterator
@@ -17,10 +17,12 @@ impl<Iter> Coroutine for CoWrap<Iter>
     }
 }
 
-pub trait Wrap<I>: Sized {
+pub trait Wrap
+    where Self: Iterator + Sized
+{
     fn wrap(self) -> CoWrap<Self> {
         CoWrap(self)
     }
 }
 
-impl<I> Wrap<I> for I where I: Iterator {}
+impl<I> Wrap for I where I: Iterator {}

@@ -18,14 +18,17 @@ impl<C, F> Coroutine for CoMapYield<C, F>
     }
 }
 
-pub trait MapYield<F>: Sized {
-    fn map_yield(self, f: F) -> CoMapYield<Self, F> {
+pub trait MapYield
+    where Self: Coroutine
+{
+    fn map_yield<F>(self, f: F) -> CoMapYield<Self, F> where 
+          F: FnMut<(Self::Yield,)>
+    {
         CoMapYield(self, f)
     }
 }
 
-impl<C, F> MapYield<F> for C
-    where C: Coroutine,
-          F: FnOnce<(C::Yield,)>
+impl<C> MapYield for C
+    where C: Coroutine
 {
 }
