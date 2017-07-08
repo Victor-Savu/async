@@ -1,34 +1,34 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 
-pub struct CoMapYield<C, F>(C, F);
+pub struct GenMapYield<C, F>(C, F);
 
-impl<C, F> Coroutine for CoMapYield<C, F>
-    where C: Coroutine,
+impl<C, F> Generator for GenMapYield<C, F>
+    where C: Generator,
           F: FnMut<(C::Yield,)>
 {
     type Yield = F::Output;
     type Return = C::Return;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         let mut f = self.1;
         match self.0.next() {
-            CoResult::Yield(y, c) => CoResult::Yield(f(y), c.map_yield(f)),
-            CoResult::Return(res) => CoResult::Return(res),
+            GenResult::Yield(y, c) => GenResult::Yield(f(y), c.map_yield(f)),
+            GenResult::Return(res) => GenResult::Return(res),
         }
     }
 }
 
 pub trait MapYield
-    where Self: Coroutine
+    where Self: Generator
 {
-    fn map_yield<F>(self, f: F) -> CoMapYield<Self, F> where 
+    fn map_yield<F>(self, f: F) -> GenMapYield<Self, F> where 
           F: FnMut<(Self::Yield,)>
     {
-        CoMapYield(self, f)
+        GenMapYield(self, f)
     }
 }
 
 impl<C> MapYield for C
-    where C: Coroutine
+    where C: Generator
 {
 }

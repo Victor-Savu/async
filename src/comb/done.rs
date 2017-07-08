@@ -1,19 +1,19 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 
-pub struct CoDone<U>(U);
+pub struct GenDone<U>(U);
 
-impl<U> Coroutine for CoDone<U> {
+impl<U> Generator for GenDone<U> {
     type Yield = !;
     type Return = U;
 
-    fn next(self) -> CoResult<Self> {
-        CoResult::Return(self.0)
+    fn next(self) -> GenResult<Self> {
+        GenResult::Return(self.0)
     }
 }
 
 pub trait Done: Sized {
-    fn done(self) -> CoDone<Self> {
-        CoDone(self)
+    fn done(self) -> GenDone<Self> {
+        GenDone(self)
     }
 }
 

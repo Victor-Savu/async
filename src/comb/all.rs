@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 use either::Either;
-use comb::race::{CoRace, Race};
-use comb::chain::{CoChain, Chain};
-use map::ret::{CoMapReturn, MapReturn};
+use comb::race::{GenRace, Race};
+use comb::chain::{GenChain, Chain};
+use map::ret::{GenMapReturn, MapReturn};
 
 pub struct Prepend<F>(F);
 
@@ -39,20 +39,20 @@ impl<I, F> FnOnce<(I,)> for Append<F> {
 }
 
 pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>)
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>;
+    where F: Generator,
+          L: Generator<Yield = F::Yield>;
 
-impl<F: Coroutine, L: Coroutine<Yield = F::Yield>> ContinueRemaining<F, L> {
+impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L> {
     fn new() -> Self {
         ContinueRemaining(PhantomData)
     }
 }
 
 impl<F, L> FnOnce<(Either<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>
+    where F: Generator,
+          L: Generator<Yield = F::Yield>
 {
-    type Output = Either<CoMapReturn<L, Prepend<F::Return>>, CoMapReturn<F, Append<L::Return>>>;
+    type Output = Either<GenMapReturn<L, Prepend<F::Return>>, GenMapReturn<F, Append<L::Return>>>;
 
     extern "rust-call" fn call_once(self,
                                     (results,): (Either<(F::Return, L), (F, L::Return)>,))
@@ -64,31 +64,31 @@ impl<F, L> FnOnce<(Either<(F::Return, L), (F, L::Return)>,)> for ContinueRemaini
     }
 }
 
-pub struct CoAll<F, L>(CoChain<CoRace<F, L>, ContinueRemaining<F, L>>)
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>;
+pub struct GenAll<F, L>(GenChain<GenRace<F, L>, ContinueRemaining<F, L>>)
+    where F: Generator,
+          L: Generator<Yield = F::Yield>;
 
-impl<F, L> Coroutine for CoAll<F, L>
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>
+impl<F, L> Generator for GenAll<F, L>
+    where F: Generator,
+          L: Generator<Yield = F::Yield>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         match self.0.next() {
-            CoResult::Yield(y, s) => CoResult::Yield(y, CoAll(s)),
-            CoResult::Return(r) => CoResult::Return(r),
+            GenResult::Yield(y, s) => GenResult::Yield(y, GenAll(s)),
+            GenResult::Return(r) => GenResult::Return(r),
         }
     }
 }
 
-pub trait All: Coroutine {
-    fn all<L>(self, l: L) -> CoAll<Self, L>
-        where L: Coroutine<Yield = Self::Yield>
+pub trait All: Generator {
+    fn all<L>(self, l: L) -> GenAll<Self, L>
+        where L: Generator<Yield = Self::Yield>
     {
-        CoAll(self.race(l).chain(ContinueRemaining::new()))
+        GenAll(self.race(l).chain(ContinueRemaining::new()))
     }
 }
 
-impl<F> All for F where F: Coroutine {}
+impl<F> All for F where F: Generator {}

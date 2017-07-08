@@ -1,32 +1,32 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 
-pub enum CoJoin<C>
-    where C: Coroutine
+pub enum GenJoin<C>
+    where C: Generator
 {
     Outer(C),
     Inner(C::Return),
 }
 
-impl<C> Coroutine for CoJoin<C>
-    where C: Coroutine,
-          C::Return: Coroutine,
-          C::Yield: From<<C::Return as Coroutine>::Yield>
+impl<C> Generator for GenJoin<C>
+    where C: Generator,
+          C::Return: Generator,
+          C::Yield: From<<C::Return as Generator>::Yield>
 {
     type Yield = C::Yield;
-    type Return = <C::Return as Coroutine>::Return;
+    type Return = <C::Return as Generator>::Return;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         match self {
-            CoJoin::Outer(c) => {
+            GenJoin::Outer(c) => {
                 match c.next() {
-                    CoResult::Yield(y, outer) => CoResult::Yield(y, outer.join()),
-                    CoResult::Return(inner) => CoJoin::Inner(inner).next(),
+                    GenResult::Yield(y, outer) => GenResult::Yield(y, outer.join()),
+                    GenResult::Return(inner) => GenJoin::Inner(inner).next(),
                 }
             }
-            CoJoin::Inner(c) => {
+            GenJoin::Inner(c) => {
                 match c.next() {
-                    CoResult::Yield(y, inner) => CoResult::Yield(y.into(), CoJoin::Inner(inner)),
-                    CoResult::Return(result) => CoResult::Return(result),
+                    GenResult::Yield(y, inner) => GenResult::Yield(y.into(), GenJoin::Inner(inner)),
+                    GenResult::Return(result) => GenResult::Return(result),
                 }
             }
         }
@@ -34,18 +34,18 @@ impl<C> Coroutine for CoJoin<C>
 }
 
 pub trait Join
-    where Self: Coroutine,
-          Self::Return: Coroutine,
-          Self::Yield: From<<Self::Return as Coroutine>::Yield>
+    where Self: Generator,
+          Self::Return: Generator,
+          Self::Yield: From<<Self::Return as Generator>::Yield>
 {
-    fn join(self) -> CoJoin<Self> {
-        CoJoin::Outer(self)
+    fn join(self) -> GenJoin<Self> {
+        GenJoin::Outer(self)
     }
 }
 
 impl<C> Join for C
-    where C: Coroutine,
-          C::Return: Coroutine,
-          C::Yield: From<<C::Return as Coroutine>::Yield>
+    where C: Generator,
+          C::Return: Generator,
+          C::Yield: From<<C::Return as Generator>::Yield>
 {
 }

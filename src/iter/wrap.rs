@@ -1,18 +1,18 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 
-pub struct CoWrap<Iter>(Iter) where Iter: Iterator + Sized;
+pub struct GenWrap<Iter>(Iter) where Iter: Iterator + Sized;
 
-impl<Iter> Coroutine for CoWrap<Iter>
+impl<Iter> Generator for GenWrap<Iter>
     where Iter: Iterator
 {
     type Yield = Iter::Item;
     type Return = Iter;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         let mut i = self.0;
         match i.next() {
-            Some(item) => CoResult::Yield(item, CoWrap(i)),
-            _ => CoResult::Return(i),
+            Some(item) => GenResult::Yield(item, GenWrap(i)),
+            _ => GenResult::Return(i),
         }
     }
 }
@@ -20,8 +20,8 @@ impl<Iter> Coroutine for CoWrap<Iter>
 pub trait Wrap
     where Self: Iterator + Sized
 {
-    fn wrap(self) -> CoWrap<Self> {
-        CoWrap(self)
+    fn wrap(self) -> GenWrap<Self> {
+        GenWrap(self)
     }
 }
 

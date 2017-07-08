@@ -1,4 +1,4 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 
 pub enum Either<F, L> {
     Former(F),
@@ -16,25 +16,25 @@ impl<F> Either<F, F> {
 }
 
 
-impl<F, L> Coroutine for Either<F, L>
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield, Return = F::Return>
+impl<F, L> Generator for Either<F, L>
+    where F: Generator,
+          L: Generator<Yield = F::Yield, Return = F::Return>
 {
     type Yield = F::Yield;
     type Return = F::Return;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         match self {
             Either::Former(f) => {
                 match f.next() {
-                    CoResult::Yield(y, f) => CoResult::Yield(y, Either::Former(f)),
-                    CoResult::Return(r) => CoResult::Return(r),
+                    GenResult::Yield(y, f) => GenResult::Yield(y, Either::Former(f)),
+                    GenResult::Return(r) => GenResult::Return(r),
                 }
             }
             Either::Latter(l) => {
                 match l.next() {
-                    CoResult::Yield(y, l) => CoResult::Yield(y, Either::Latter(l)),
-                    CoResult::Return(r) => CoResult::Return(r),
+                    GenResult::Yield(y, l) => GenResult::Yield(y, Either::Latter(l)),
+                    GenResult::Return(r) => GenResult::Return(r),
                 }
             }
         }

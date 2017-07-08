@@ -1,31 +1,31 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 use either::Either;
 
 
-pub struct CoRace<F, L>(Either<(F, L), (F, L)>)
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>;
+pub struct GenRace<F, L>(Either<(F, L), (F, L)>)
+    where F: Generator,
+          L: Generator<Yield = F::Yield>;
 
 
-impl<F, L> Coroutine for CoRace<F, L>
-    where F: Coroutine,
-          L: Coroutine<Yield = F::Yield>
+impl<F, L> Generator for GenRace<F, L>
+    where F: Generator,
+          L: Generator<Yield = F::Yield>
 {
     type Yield = F::Yield;
     type Return = Either<(F::Return, L), (F, L::Return)>;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         match self.0 {
             Either::Former((f, l)) => {
                 match f.next() {
-                    CoResult::Yield(y, f) => CoResult::Yield(y, CoRace(Either::Latter((f, l)))),
-                    CoResult::Return(f) => CoResult::Return(Either::Former((f, l))),
+                    GenResult::Yield(y, f) => GenResult::Yield(y, GenRace(Either::Latter((f, l)))),
+                    GenResult::Return(f) => GenResult::Return(Either::Former((f, l))),
                 }
             }
             Either::Latter((f, l)) => {
                 match l.next() {
-                    CoResult::Yield(y, l) => CoResult::Yield(y, CoRace(Either::Former((f, l)))),
-                    CoResult::Return(l) => CoResult::Return(Either::Latter((f, l))),
+                    GenResult::Yield(y, l) => GenResult::Yield(y, GenRace(Either::Former((f, l)))),
+                    GenResult::Return(l) => GenResult::Return(Either::Latter((f, l))),
                 }
             }
         }
@@ -33,13 +33,13 @@ impl<F, L> Coroutine for CoRace<F, L>
 }
 
 pub trait Race
-    where Self: Coroutine
+    where Self: Generator
 {
-    fn race<L>(self, l: L) -> CoRace<Self, L>
-        where L: Coroutine<Yield = Self::Yield>
+    fn race<L>(self, l: L) -> GenRace<Self, L>
+        where L: Generator<Yield = Self::Yield>
     {
-        CoRace(Either::Former((self, l)))
+        GenRace(Either::Former((self, l)))
     }
 }
 
-impl<C> Race for C where C: Coroutine {}
+impl<C> Race for C where C: Generator {}

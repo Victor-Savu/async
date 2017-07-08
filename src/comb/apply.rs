@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use co::{Coroutine, CoResult};
-use map::ret::{CoMapReturn, MapReturn};
-use comb::all::{CoAll, All};
+use gen::{Generator, GenResult};
+use map::ret::{GenMapReturn, MapReturn};
+use comb::all::{GenAll, All};
 
 pub struct ApplyFn<F, I>(PhantomData<(F, I)>) where F: FnOnce<(I,)>;
 
@@ -16,50 +16,50 @@ impl<F, I> FnOnce<((F, I),)> for ApplyFn<F, I>
     }
 }
 
-pub struct CoApply<F, C>(CoMapReturn<CoAll<F, C>, ApplyFn<F::Return, C::Return>>)
-    where C: Coroutine,
-          F: Coroutine<Yield = C::Yield>,
+pub struct GenApply<F, C>(GenMapReturn<GenAll<F, C>, ApplyFn<F::Return, C::Return>>)
+    where C: Generator,
+          F: Generator<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>;
 
-impl<F, C> CoApply<F, C>
-    where C: Coroutine,
-          F: Coroutine<Yield = C::Yield>,
+impl<F, C> GenApply<F, C>
+    where C: Generator,
+          F: Generator<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>
 {
     fn new(functor: F, c: C) -> Self
     {
-        CoApply(functor.all(c).map_return(ApplyFn(PhantomData)))
+        GenApply(functor.all(c).map_return(ApplyFn(PhantomData)))
     }
 }
 
-impl<C, F> Coroutine for CoApply<F, C>
-    where C: Coroutine,
-          F: Coroutine<Yield = C::Yield>,
+impl<C, F> Generator for GenApply<F, C>
+    where C: Generator,
+          F: Generator<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>
 {
     type Yield = C::Yield;
     type Return = <F::Return as FnOnce<(C::Return,)>>::Output;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         match self.0.next() {
-            CoResult::Yield(y, s) => CoResult::Yield(y, CoApply(s)),
-            CoResult::Return(r) => CoResult::Return(r),
+            GenResult::Yield(y, s) => GenResult::Yield(y, GenApply(s)),
+            GenResult::Return(r) => GenResult::Return(r),
         }
     }
 }
 
-pub trait Apply<I>: Coroutine
+pub trait Apply<I>: Generator
     where Self::Return: FnOnce<(I,)>
 {
-    fn apply<C>(self, c: C) -> CoApply<Self, C>
-        where C: Coroutine<Yield = Self::Yield, Return = I>
+    fn apply<C>(self, c: C) -> GenApply<Self, C>
+        where C: Generator<Yield = Self::Yield, Return = I>
     {
-        CoApply::new(self, c)
+        GenApply::new(self, c)
     }
 }
 
 impl<I, T> Apply<I> for T
-    where T: Coroutine,
+    where T: Generator,
           T::Return: FnOnce<(I,)>
 {
 }

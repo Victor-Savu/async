@@ -1,38 +1,38 @@
-use map::ret::{MapReturn, CoMapReturn};
-use co::{Coroutine, CoResult};
-use comb::join::{Join, CoJoin};
+use map::ret::{MapReturn, GenMapReturn};
+use gen::{Generator, GenResult};
+use comb::join::{Join, GenJoin};
 
 
-pub struct CoChain<F, L>(CoJoin<CoMapReturn<F, L>>)
-    where F: Coroutine,
+pub struct GenChain<F, L>(GenJoin<GenMapReturn<F, L>>)
+    where F: Generator,
           L: FnOnce<(F::Return,)>,
-          L::Output: Coroutine<Yield = F::Yield>;
+          L::Output: Generator<Yield = F::Yield>;
 
-impl<F, L> Coroutine for CoChain<F, L>
-    where F: Coroutine,
+impl<F, L> Generator for GenChain<F, L>
+    where F: Generator,
           L: FnOnce<(F::Return,)>,
-          L::Output: Coroutine<Yield = F::Yield>
+          L::Output: Generator<Yield = F::Yield>
 {
     type Yield = F::Yield;
-    type Return = <L::Output as Coroutine>::Return;
+    type Return = <L::Output as Generator>::Return;
 
-    fn next(self) -> CoResult<Self> {
+    fn next(self) -> GenResult<Self> {
         match self.0.next() {
-            CoResult::Yield(y, s) => CoResult::Yield(y, CoChain(s)),
-            CoResult::Return(r) => CoResult::Return(r),
+            GenResult::Yield(y, s) => GenResult::Yield(y, GenChain(s)),
+            GenResult::Return(r) => GenResult::Return(r),
         }
     }
 }
 
 pub trait Chain
-    where Self: Coroutine
+    where Self: Generator
 {
-    fn chain<L>(self, l: L) -> CoChain<Self, L>
+    fn chain<L>(self, l: L) -> GenChain<Self, L>
         where L: FnOnce<(Self::Return,)>,
-              L::Output: Coroutine<Yield = Self::Yield>
+              L::Output: Generator<Yield = Self::Yield>
     {
-        CoChain(self.map_return(l).join())
+        GenChain(self.map_return(l).join())
     }
 }
 
-impl<F> Chain for F where F: Coroutine {}
+impl<F> Chain for F where F: Generator {}

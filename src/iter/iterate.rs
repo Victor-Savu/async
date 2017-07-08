@@ -1,9 +1,9 @@
-use co::{Coroutine, CoResult};
+use gen::{Generator, GenResult};
 
-pub struct CoIterate<C>(Option<C>);
+pub struct GenIterate<C>(Option<C>);
 
-impl<C> Iterator for CoIterate<C>
-    where C: Coroutine
+impl<C> Iterator for GenIterate<C>
+    where C: Generator
 {
     type Item = C::Yield;
 
@@ -11,7 +11,7 @@ impl<C> Iterator for CoIterate<C>
         match self.0.take() {
             Some(coro) => {
                 match coro.next() {
-                    CoResult::Yield(i, cnt) => {
+                    GenResult::Yield(i, cnt) => {
                         self.0 = Some(cnt);
                         Some(i)
                     }
@@ -26,9 +26,9 @@ impl<C> Iterator for CoIterate<C>
 pub trait Iterate
     where Self: Sized
 {
-    fn iterate(self) -> CoIterate<Self> {
-        CoIterate(Some(self))
+    fn iterate(self) -> GenIterate<Self> {
+        GenIterate(Some(self))
     }
 }
 
-impl<C> Iterate for C where C: Coroutine {}
+impl<C> Iterate for C where C: Generator {}

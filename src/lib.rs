@@ -3,7 +3,7 @@
 #![feature(never_type)]
 #![feature(unboxed_closures)]
 
-pub mod co;
+pub mod gen;
 pub mod comb;
 pub mod either;
 pub mod iter;
