@@ -4,12 +4,11 @@ use map::CoMap;
 pub struct CoMapReturn<C, F>(CoMap<C, F>);
 
 impl<C, F> Coroutine for CoMapReturn<C, F>
-    where C: Coroutine<Continue = C>,
+    where C: Coroutine,
           F: FnOnce<(C::Return,)>
 {
     type Yield = C::Yield;
     type Return = F::Output;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.0.c.next() {

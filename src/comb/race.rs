@@ -4,16 +4,15 @@ use either::Either;
 
 pub struct CoRace<F, L>(Either<(F, L), (F, L)>)
     where F: Coroutine,
-          L: Coroutine<Yield = F::Yield, Continue = L>;
+          L: Coroutine<Yield = F::Yield>;
 
 
 impl<F, L> Coroutine for CoRace<F, L>
-    where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield, Continue = L>
+    where F: Coroutine,
+          L: Coroutine<Yield = F::Yield>
 {
     type Yield = F::Yield;
     type Return = Either<(F::Return, L), (F, L::Return)>;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.0 {
@@ -37,7 +36,7 @@ pub trait Race
     where Self: Coroutine
 {
     fn race<L>(self, l: L) -> CoRace<Self, L>
-        where L: Coroutine<Yield = Self::Yield, Continue = L>
+        where L: Coroutine<Yield = Self::Yield>
     {
         CoRace(Either::Former((self, l)))
     }

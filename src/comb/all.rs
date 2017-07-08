@@ -39,10 +39,10 @@ impl<I, F> FnOnce<(I,)> for Append<F> {
 }
 
 pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>)
-    where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield, Continue = L>;
+    where F: Coroutine,
+          L: Coroutine<Yield = F::Yield>;
 
-impl<F: Coroutine<Continue = F>, L: Coroutine<Yield = F::Yield, Continue = L>>
+impl<F: Coroutine, L: Coroutine<Yield = F::Yield>>
     ContinueRemaining<F, L> {
     fn new() -> Self {
         ContinueRemaining(PhantomData)
@@ -50,8 +50,8 @@ impl<F: Coroutine<Continue = F>, L: Coroutine<Yield = F::Yield, Continue = L>>
 }
 
 impl<F, L> FnOnce<(Either<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
-    where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield, Continue = L>
+    where F: Coroutine,
+          L: Coroutine<Yield = F::Yield>
 {
     type Output = Either<CoMapReturn<L, Prepend<F::Return>>, CoMapReturn<F, Append<L::Return>>>;
 
@@ -66,16 +66,15 @@ impl<F, L> FnOnce<(Either<(F::Return, L), (F, L::Return)>,)> for ContinueRemaini
 }
 
 pub struct CoAll<F, L>(CoChain<CoRace<F, L>, ContinueRemaining<F, L>>)
-    where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield, Continue = L>;
+    where F: Coroutine,
+          L: Coroutine<Yield = F::Yield>;
 
 impl<F, L> Coroutine for CoAll<F, L>
-    where F: Coroutine<Continue = F>,
-          L: Coroutine<Yield = F::Yield, Continue = L>
+    where F: Coroutine,
+          L: Coroutine<Yield = F::Yield>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.0.next() {
@@ -85,15 +84,15 @@ impl<F, L> Coroutine for CoAll<F, L>
     }
 }
 
-pub trait All: Coroutine<Continue = Self> {
-    fn all<L>(self, l: L) -> CoAll<Self, L> where L: Coroutine<Yield = Self::Yield, Continue = L>;
+pub trait All: Coroutine {
+    fn all<L>(self, l: L) -> CoAll<Self, L> where L: Coroutine<Yield = Self::Yield>;
 }
 
 impl<F> All for F
-    where F: Coroutine<Continue = F>
+    where F: Coroutine
 {
     fn all<L>(self, l: L) -> CoAll<Self, L>
-        where L: Coroutine<Yield = Self::Yield, Continue = L>
+        where L: Coroutine<Yield = Self::Yield>
     {
         CoAll(self.race(l).chain(ContinueRemaining::new()))
     }

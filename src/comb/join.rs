@@ -8,13 +8,12 @@ pub enum CoJoin<C>
 }
 
 impl<C> Coroutine for CoJoin<C>
-    where C: Coroutine<Continue = C>,
-          C::Return: Coroutine<Continue = C::Return>,
+    where C: Coroutine,
+          C::Return: Coroutine,
           C::Yield: From<<C::Return as Coroutine>::Yield>
 {
     type Yield = C::Yield;
     type Return = <C::Return as Coroutine>::Return;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self {

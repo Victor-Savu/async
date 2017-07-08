@@ -3,14 +3,13 @@
 pub enum CoResult<Coro>
     where Coro: Coroutine
 {
-    Yield(Coro::Yield, Coro::Continue),
+    Yield(Coro::Yield, Coro),
     Return(Coro::Return),
 }
 
 pub trait Coroutine: Sized {
     type Yield;
     type Return;
-    type Continue;
 
     fn next(self) -> CoResult<Self>;
 }

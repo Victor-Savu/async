@@ -4,18 +4,17 @@ use comb::join::{Join, CoJoin};
 
 
 pub struct CoChain<F, L>(CoJoin<CoMapReturn<F, L>>)
-    where F: Coroutine<Continue = F>,
+    where F: Coroutine,
           L: FnOnce<(F::Return,)>,
-          L::Output: Coroutine<Yield = F::Yield, Continue = L::Output>;
+          L::Output: Coroutine<Yield = F::Yield>;
 
 impl<F, L> Coroutine for CoChain<F, L>
-    where F: Coroutine<Continue = F>,
+    where F: Coroutine,
           L: FnOnce<(F::Return,)>,
-          L::Output: Coroutine<Yield = F::Yield, Continue = L::Output>
+          L::Output: Coroutine<Yield = F::Yield>
 {
     type Yield = F::Yield;
     type Return = <L::Output as Coroutine>::Return;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.0.next() {
@@ -25,18 +24,18 @@ impl<F, L> Coroutine for CoChain<F, L>
     }
 }
 
-pub trait Chain: Coroutine<Continue = Self> {
+pub trait Chain: Coroutine {
     fn chain<L>(self, l: L) -> CoChain<Self, L>
         where L: FnOnce<(Self::Return,)>,
-              L::Output: Coroutine<Yield = Self::Yield, Continue = L::Output>;
+              L::Output: Coroutine<Yield = Self::Yield>;
 }
 
 impl<F> Chain for F
-    where F: Coroutine<Continue = Self>
+    where F: Coroutine
 {
     fn chain<L>(self, l: L) -> CoChain<F, L>
         where L: FnOnce<(Self::Return,)>,
-              L::Output: Coroutine<Yield = Self::Yield, Continue = L::Output>
+              L::Output: Coroutine<Yield = Self::Yield>
     {
         CoChain(self.map_return(l).join())
     }

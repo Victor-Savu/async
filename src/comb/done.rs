@@ -6,7 +6,6 @@ impl<U> Coroutine for CoDone<U>
 {
     type Yield = !;
     type Return = U;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         CoResult::Return(self.0)

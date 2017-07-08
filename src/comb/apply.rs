@@ -17,18 +17,17 @@ impl<F, I> FnOnce<((F, I),)> for ApplyFn<F, I>
 }
 
 pub struct CoApply<F, C>(CoMapReturn<CoAll<F, C>, ApplyFn<F::Return, C::Return>>)
-    where C: Coroutine<Continue = C>,
-          F: Coroutine<Yield = C::Yield, Continue = F>,
+    where C: Coroutine,
+          F: Coroutine<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>;
 
 impl<C, F> Coroutine for CoApply<F, C>
-    where C: Coroutine<Continue = C>,
-          F: Coroutine<Yield = C::Yield, Continue = F>,
+    where C: Coroutine,
+          F: Coroutine<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>
 {
     type Yield = C::Yield;
     type Return = <F::Return as FnOnce<(C::Return,)>>::Output;
-    type Continue = Self;
 
     fn next(self) -> CoResult<Self> {
         match self.0.next() {
@@ -38,18 +37,18 @@ impl<C, F> Coroutine for CoApply<F, C>
     }
 }
 
-pub trait Apply<I>: Coroutine<Continue = Self>
+pub trait Apply<I>: Coroutine
     where Self::Return: FnOnce<(I,)>
 {
     fn apply<C>(self, c: C) -> CoApply<Self, C>
-        where C: Coroutine<Yield = Self::Yield, Return = I, Continue = C>
+        where C: Coroutine<Yield = Self::Yield, Return = I>
     {
         CoApply(self.all(c).map_return(ApplyFn(PhantomData)))
     }
 }
 
 impl<I, T> Apply<I> for T
-    where T: Coroutine<Continue = T>,
+    where T: Coroutine,
           T::Return: FnOnce<(I,)>
 {
 }
