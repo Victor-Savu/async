@@ -1,7 +1,6 @@
 use co::{Coroutine, CoResult};
-use map::CoMap;
 
-pub struct CoMapYield<C, F>(CoMap<C, F>);
+pub struct CoMapYield<C, F>(C, F);
 
 impl<C, F> Coroutine for CoMapYield<C, F>
     where C: Coroutine,
@@ -11,8 +10,8 @@ impl<C, F> Coroutine for CoMapYield<C, F>
     type Return = C::Return;
 
     fn next(self) -> CoResult<Self> {
-        let mut f = self.0.f;
-        match self.0.c.next() {
+        let mut f = self.1;
+        match self.0.next() {
             CoResult::Yield(y, c) => CoResult::Yield(f(y), c.map_yield(f)),
             CoResult::Return(res) => CoResult::Return(res),
         }
@@ -21,7 +20,7 @@ impl<C, F> Coroutine for CoMapYield<C, F>
 
 pub trait MapYield<F>: Sized {
     fn map_yield(self, f: F) -> CoMapYield<Self, F> {
-        CoMapYield(CoMap { c: self, f: f })
+        CoMapYield(self, f)
     }
 }
 

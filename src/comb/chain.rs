@@ -27,16 +27,10 @@ impl<F, L> Coroutine for CoChain<F, L>
 pub trait Chain: Coroutine {
     fn chain<L>(self, l: L) -> CoChain<Self, L>
         where L: FnOnce<(Self::Return,)>,
-              L::Output: Coroutine<Yield = Self::Yield>;
-}
-
-impl<F> Chain for F
-    where F: Coroutine
-{
-    fn chain<L>(self, l: L) -> CoChain<F, L>
-        where L: FnOnce<(Self::Return,)>,
               L::Output: Coroutine<Yield = Self::Yield>
     {
         CoChain(self.map_return(l).join())
     }
 }
+
+impl<F> Chain for F where F: Coroutine {}

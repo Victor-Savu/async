@@ -42,8 +42,7 @@ pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>)
     where F: Coroutine,
           L: Coroutine<Yield = F::Yield>;
 
-impl<F: Coroutine, L: Coroutine<Yield = F::Yield>>
-    ContinueRemaining<F, L> {
+impl<F: Coroutine, L: Coroutine<Yield = F::Yield>> ContinueRemaining<F, L> {
     fn new() -> Self {
         ContinueRemaining(PhantomData)
     }
@@ -85,15 +84,11 @@ impl<F, L> Coroutine for CoAll<F, L>
 }
 
 pub trait All: Coroutine {
-    fn all<L>(self, l: L) -> CoAll<Self, L> where L: Coroutine<Yield = Self::Yield>;
-}
-
-impl<F> All for F
-    where F: Coroutine
-{
     fn all<L>(self, l: L) -> CoAll<Self, L>
         where L: Coroutine<Yield = Self::Yield>
     {
         CoAll(self.race(l).chain(ContinueRemaining::new()))
     }
 }
+
+impl<F> All for F where F: Coroutine {}

@@ -2,8 +2,7 @@ use co::{Coroutine, CoResult};
 
 pub struct CoDone<U>(U);
 
-impl<U> Coroutine for CoDone<U>
-{
+impl<U> Coroutine for CoDone<U> {
     type Yield = !;
     type Return = U;
 
@@ -18,5 +17,4 @@ pub trait Done: Sized {
     }
 }
 
-impl<U> Done for U where U: Sized {
-}
+impl<U> Done for U where U: Sized {}

@@ -1,7 +1,6 @@
 use co::{Coroutine, CoResult};
-use map::CoMap;
 
-pub struct CoMapReturn<C, F>(CoMap<C, F>);
+pub struct CoMapReturn<C, F>(C, F);
 
 impl<C, F> Coroutine for CoMapReturn<C, F>
     where C: Coroutine,
@@ -11,16 +10,16 @@ impl<C, F> Coroutine for CoMapReturn<C, F>
     type Return = F::Output;
 
     fn next(self) -> CoResult<Self> {
-        match self.0.c.next() {
-            CoResult::Yield(y, c) => CoResult::Yield(y, c.map_return(self.0.f)),
-            CoResult::Return(res) => CoResult::Return((self.0.f)(res)),
+        match self.0.next() {
+            CoResult::Yield(y, c) => CoResult::Yield(y, c.map_return(self.1)),
+            CoResult::Return(res) => CoResult::Return((self.1)(res)),
         }
     }
 }
 
 pub trait MapReturn<F>: Sized {
     fn map_return(self, f: F) -> CoMapReturn<Self, F> {
-        CoMapReturn(CoMap { c: self, f: f })
+        CoMapReturn(self, f)
     }
 }
 
