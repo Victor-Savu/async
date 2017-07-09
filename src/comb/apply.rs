@@ -63,3 +63,17 @@ impl<I, T> Apply<I> for T
           T::Return: FnOnce<(I,)>
 {
 }
+
+#[cfg(test)]
+mod tests {
+
+    use comb::done::Done;
+    use comb::apply::Apply;
+
+    #[test]
+    fn apply() {
+        let four = (|x| x+1).done().apply(3.done());
+        let res = each!(four);
+        assert_eq!(res, 4);
+    }
+}

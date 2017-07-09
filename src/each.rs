@@ -1,128 +1,126 @@
 #![macro_use]
 
 #[macro_export]
+macro_rules! _each_impl {
+
+($iter:expr => $elem:pat in
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block
+ else with $else_:pat, gen $rest_:pat in
+     $else_body:block) => {{
+    let mut iter_ = $iter;
+    'outer: loop {
+        let $else_ = loop {
+            match $crate::gen::Generator::next(iter_) {
+                $crate::gen::GenResult::Yield($elem, tail) => {
+                    #[allow(unused_assignments)] {
+                        iter_ = tail
+                    }
+                    $loop_body
+                },
+                $crate::gen::GenResult::Return($then_) => {
+                    break 'outer $then_body;
+                }
+            }
+        };
+        let $rest_ = iter_;
+        break 'outer $else_body;
+    }
+}};
+
+}
+
+#[macro_export]
 macro_rules! each {
 
 ($iter:expr => $elem:pat in
      $loop_body:block
- then with $then:pat in
+ then with $then_:pat in
      $then_body:block
- else with $else_:pat, gen $rest:pat in
+ else with $else_:pat, gen $rest_:pat in
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return($then) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        let $rest = iter_;
-        break 'outer $else_body;
-    }
+    _each_impl!($iter => $elem in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with $else_, gen $rest_ in
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
      $loop_body:block
- then with $then:pat in
-     $then_body:block
- else gen $rest:pat in
-     $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let _ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return($then) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        let $rest = iter_;
-        break 'outer $else_body;
-    }
-}};
-
-($iter:expr => $elem:pat in
-     $loop_body:block
- then with $then:pat in
+ then with $then_:pat in
      $then_body:block
  else with $else_:pat in
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return($then) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with $else_, gen _ in
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
      $loop_body:block
- then with $then:pat in
+ then with $then_:pat in
+     $then_body:block
+ else gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => $elem in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with _, gen $rest_ in
+        $else_body
+    )
+}};
+
+($iter:expr => $elem:pat in
+     $loop_body:block
+ then with $then_:pat in
      $then_body:block
  else
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let _ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return($then) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else gen _ in
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
      $loop_body:block
- then with $then:pat in
+ then with $then_:pat in
      $then_body:block) => {{
-    let mut iter_ = $iter;
-    loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield($elem, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-                $loop_body
-            },
-            $crate::gen::GenResult::Return($then) => {
-                break $then_body;
-            }
-        }
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with break_value in {
+        break_value
+    })
+}};
+
+// no $then_
+($iter:expr => $elem:pat in
+     $loop_body:block
+ then
+     $then_body:block
+ else with $else_:pat, gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => $elem in
+        $loop_body
+    then with _ in
+        $then_body
+    else with $else_, gen $rest_ in
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
@@ -131,46 +129,28 @@ macro_rules! each {
      $then_body:block
  else with $else_:pat in
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(_) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with _ in
+        $then_body
+    else with $else_ in
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
      $loop_body:block
- else with $else_:pat in
+ then
+     $then_body:block
+ else gen $rest_:pat in
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(then) => {
-                    break 'outer then;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with _ in
+        $then_body
+    else gen $rest_ in
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
@@ -179,117 +159,89 @@ macro_rules! each {
      $then_body:block
  else
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(_) => {
-                    break 'outer $then_body;
-                }
-            }
-        }
-        break 'outer $else_body;
-    }
-}};
-
-($iter:expr => $elem:pat in
-     $loop_body:block
- else
-     $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(then) => {
-                    break 'outer then;
-                }
-            }
-        }
-        break 'outer $else_body;
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with _ in
+        $then_body
+    else
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
      $loop_body:block
  then
      $then_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield($elem, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-                $loop_body
-            },
-            $crate::gen::GenResult::Return(_) => {
-                break 'outer $then_body;
-            }
-        }
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with _ in
+        $then_body
+    )
+}};
+
+// no then_body
+($iter:expr => $elem:pat in
+     $loop_body:block
+ else with $else_:pat, gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => $elem in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else with $else_, gen $rest_ in
+        $else_body
+    )
+}};
+($iter:expr => $elem:pat in
+     $loop_body:block
+ else with $else_:pat in
+     $else_body:block) => {{
+    each!($iter => $elem in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else with $else_ in
+        $else_body
+    )
+}};
+
+($iter:expr => $elem:pat in
+     $loop_body:block
+ else gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => $elem in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else gen $rest_ in
+        $else_body
+    )
+}};
+
+($iter:expr => $elem:pat in
+     $loop_body:block
+ else
+     $else_body:block) => {{
+    each!($iter => $elem in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else
+        $else_body
+    )
 }};
 
 ($iter:expr => $elem:pat in
      $loop_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        #[allow(unreachable_patterns)] match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield($elem, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-                #[warn(unreachable_patterns)] {
-                    $loop_body
-                }
-            },
-            $crate::gen::GenResult::Return(then) => {
-                #[allow(unreachable_code)]{
-                    break 'outer then;
-                }
-            }
-        }
-    }
+    each!($iter => $elem in
+        $loop_body
+    then with break_value in {
+        break_value
+    })
 }};
 
 ($iter:expr =>
-     $loop_body:block
- then with $then:pat in
-     $then_body:block
- else with $else_:pat in
-     $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield(_, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return($then) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
-}};
-
-($iter:expr =>
- then with $then:pat in
+ then with $then_:pat in
      $then_body:block) => {{
     let mut iter_ = $iter;
     loop {
@@ -299,52 +251,7 @@ macro_rules! each {
                     iter_ = tail
                 }
             },
-            $crate::gen::GenResult::Return($then) => {
-                break $then_body;
-            }
-        }
-    }
-}};
-
-($iter:expr =>
-     $loop_body:block
- then with $then:pat in
-     $then_body:block
- else
-     $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield(_, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return($then) => {
-                    break 'outer $then_body;
-                }
-            }
-        }
-        break 'outer $else_body;
-    }
-}};
-
-($iter:expr =>
-     $loop_body:block
- then with $then:pat in
-     $then_body:block) => {{
-    let mut iter_ = $iter;
-    loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield(_, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-                $loop_body
-            },
-            $crate::gen::GenResult::Return($then) => {
+            $crate::gen::GenResult::Return($then_) => {
                 break $then_body;
             }
         }
@@ -354,19 +261,100 @@ macro_rules! each {
 ($iter:expr =>
  then
      $then_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield(_, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-            },
-            $crate::gen::GenResult::Return(_) => {
-                break 'outer $then_body;
-            }
-        }
-    }
+    each!($iter =>
+    then with _ in
+        $then_body
+    )
+}};
+// no $elem
+
+($iter:expr =>
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block
+ else with $else_:pat, gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with $else_, gen $rest_ in
+        $else_body
+    )
+}};
+
+($iter:expr =>
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block
+ else with $else_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with $else_, gen _ in
+        $else_body
+    )
+}};
+
+($iter:expr =>
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block
+ else gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with _, gen $rest_ in
+        $else_body
+    )
+}};
+
+($iter:expr =>
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block
+ else
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else gen _ in
+        $else_body
+    )
+}};
+
+($iter:expr =>
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with $then_ in
+        $then_body
+    else with break_value {
+        break_value
+    })
+}};
+
+// no $then_
+($iter:expr =>
+     $loop_body:block
+ then
+     $then_body:block
+ else with $else_:pat, gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with _ in
+        $then_body
+    else with $else_, gen $rest_ in
+        $else_body
+    )
 }};
 
 ($iter:expr =>
@@ -375,46 +363,28 @@ macro_rules! each {
      $then_body:block
  else with $else_:pat in
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield(_, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(_) => {
-                    break 'outer $then_body;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
+    each!($iter => _ in
+        $loop_body
+    then with _ in
+        $then_body
+    else with $else_ in
+        $else_body
+    )
 }};
 
 ($iter:expr =>
      $loop_body:block
- else with $else_:pat in
+ then
+     $then_body:block
+ else gen $rest_:pat in
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield(_, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(then) => {
-                    break 'outer then;
-                }
-            }
-        };
-        break 'outer $else_body;
-    }
+    each!($iter => _ in
+        $loop_body
+    then with _ in
+        $then_body
+    else gen $rest_ in
+        $else_body
+    )
 }};
 
 ($iter:expr =>
@@ -423,100 +393,92 @@ macro_rules! each {
      $then_body:block
  else
      $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield(_, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(_) => {
-                    break 'outer $then_body;
-                }
-            }
-        }
-        break 'outer $else_body;
-    }
-}};
-
-($iter:expr =>
-     $loop_body:block
- else
-     $else_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield(_, tail) => {
-                    #[allow(unused_assignments)] {
-                        iter_ = tail
-                    }
-                    $loop_body
-                },
-                $crate::gen::GenResult::Return(then) => {
-                    break 'outer then;
-                }
-            }
-        }
-        break 'outer $else_body;
-    }
+    each!($iter => _ in
+        $loop_body
+    then with _ in
+        $then_body
+    else
+        $else_body
+    )
 }};
 
 ($iter:expr =>
      $loop_body:block
  then
      $then_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield(_, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-                $loop_body
-            },
-            $crate::gen::GenResult::Return(_) => {
-                break 'outer $then_body;
-            }
-        }
-    }
+    each!($iter => _ in
+        $loop_body
+    then with _ in
+        $then_body
+    )
+}};
+
+// no then_body
+($iter:expr =>
+     $loop_body:block
+ else with $else_:pat, gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else with $else_, gen $rest_ in
+        $else_body
+    )
+}};
+($iter:expr =>
+     $loop_body:block
+ else with $else_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else with $else_ in
+        $else_body
+    )
+}};
+
+($iter:expr =>
+     $loop_body:block
+ else gen $rest_:pat in
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else gen $rest_ in
+        $else_body
+    )
+}};
+
+($iter:expr =>
+     $loop_body:block
+ else
+     $else_body:block) => {{
+    each!($iter => _ in
+        $loop_body
+    then with break_value in {
+        break_value
+    } else
+        $else_body
+    )
 }};
 
 ($iter:expr =>
      $loop_body:block) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield(_, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-                $loop_body
-            },
-            $crate::gen::GenResult::Return(then) => {
-                break 'outer then;
-            }
-        }
-    }
+    each!($iter => _ in
+        $loop_body
+    then with break_value in {
+        break_value
+    })
 }};
 
 ($iter:expr) => {{
-    let mut iter_ = $iter;
-    'outer: loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield(_, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-            },
-            $crate::gen::GenResult::Return(then) => {
-                break 'outer then;
-            }
-        }
-    }
+    each!($iter =>
+    then with final_value in {
+        final_value
+    })
 }};
 
 }
