@@ -3,6 +3,7 @@
 #[macro_export]
 macro_rules! _each_impl {
 
+// full
 ($iter:expr => $elem:pat in
      $loop_body:block
  then with $then_:pat in
@@ -26,6 +27,39 @@ macro_rules! _each_impl {
         };
         let $rest_ = iter_;
         break 'outer $else_body;
+    }
+}};
+
+// without $else_body
+($iter:expr => $elem:pat in
+     $loop_body:block
+ then with $then_:pat in
+     $then_body:block) => {{
+    let mut iter_ = $iter;
+    loop {
+        #[allow(unreachable_patterns)] {
+            match $crate::gen::Generator::next(iter_) {
+                $crate::gen::GenResult::Yield($elem, tail) => {
+                    #[allow(unused_assignments)] {
+                        iter_ = tail
+                    }
+                    #[warn(unreachable_patterns)] {
+                        $loop_body
+                    }
+                },
+                $crate::gen::GenResult::Return($then_) => {
+                    #[warn(unreachable_patterns)] {
+                        #[allow(unreachable_code)] {
+                            break {
+                                #[warn(unreachable_code)] {
+                                    $then_body
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }};
 
@@ -98,13 +132,11 @@ macro_rules! each {
      $loop_body:block
  then with $then_:pat in
      $then_body:block) => {{
-    each!($iter => $elem in
+    _each_impl!($iter => $elem in
         $loop_body
     then with $then_ in
         $then_body
-    else with break_value in {
-        break_value
-    })
+    )
 }};
 
 // no $then_
@@ -243,19 +275,10 @@ macro_rules! each {
 ($iter:expr =>
  then with $then_:pat in
      $then_body:block) => {{
-    let mut iter_ = $iter;
-    loop {
-        match $crate::gen::Generator::next(iter_) {
-            $crate::gen::GenResult::Yield(_, tail) => {
-                #[allow(unused_assignments)] {
-                    iter_ = tail
-                }
-            },
-            $crate::gen::GenResult::Return($then_) => {
-                break $then_body;
-            }
-        }
-    }
+    each!($iter => _ in {}
+    then with $then_ in
+        $then_body
+    )
 }};
 
 ($iter:expr =>
@@ -331,14 +354,12 @@ macro_rules! each {
 ($iter:expr =>
      $loop_body:block
  then with $then_:pat in
-     $then_body:block) => {{
+     then_body:block) => {{
     each!($iter => _ in
         $loop_body
     then with $then_ in
         $then_body
-    else with break_value {
-        break_value
-    })
+    )
 }};
 
 // no $then_
