@@ -7,6 +7,58 @@ macro_rules! each {
      $loop_body:block
  then with $then:pat in
      $then_body:block
+ else with $else_:pat, gen $rest:pat in
+     $else_body:block) => {{
+    let mut iter_ = $iter;
+    'outer: loop {
+        let $else_ = loop {
+            match $crate::gen::Generator::next(iter_) {
+                $crate::gen::GenResult::Yield($elem, tail) => {
+                    #[allow(unused_assignments)] {
+                        iter_ = tail
+                    }
+                    $loop_body
+                },
+                $crate::gen::GenResult::Return($then) => {
+                    break 'outer $then_body;
+                }
+            }
+        };
+        let $rest = iter_;
+        break 'outer $else_body;
+    }
+}};
+
+($iter:expr => $elem:pat in
+     $loop_body:block
+ then with $then:pat in
+     $then_body:block
+ else gen $rest:pat in
+     $else_body:block) => {{
+    let mut iter_ = $iter;
+    'outer: loop {
+        let _ = loop {
+            match $crate::gen::Generator::next(iter_) {
+                $crate::gen::GenResult::Yield($elem, tail) => {
+                    #[allow(unused_assignments)] {
+                        iter_ = tail
+                    }
+                    $loop_body
+                },
+                $crate::gen::GenResult::Return($then) => {
+                    break 'outer $then_body;
+                }
+            }
+        };
+        let $rest = iter_;
+        break 'outer $else_body;
+    }
+}};
+
+($iter:expr => $elem:pat in
+     $loop_body:block
+ then with $then:pat in
+     $then_body:block
  else with $else_:pat in
      $else_body:block) => {{
     let mut iter_ = $iter;
@@ -36,7 +88,7 @@ macro_rules! each {
      $else_body:block) => {{
     let mut iter_ = $iter;
     'outer: loop {
-        loop {
+        let _ = loop {
             match $crate::gen::Generator::next(iter_) {
                 $crate::gen::GenResult::Yield($elem, tail) => {
                     #[allow(unused_assignments)] {
@@ -48,7 +100,7 @@ macro_rules! each {
                     break 'outer $then_body;
                 }
             }
-        }
+        };
         break 'outer $else_body;
     }
 }};
@@ -478,9 +530,74 @@ mod tests {
     use gen::Generator;
 
     #[test]
-    fn full_each() {
+    fn each_0() {
         use std::fmt::Display;
-        fn run_full<S: Generator, B>(stream: S, should_break: B) -> (String, Vec<S::Yield>)
+
+        fn run<S: Generator, B>(stream: S, should_break: B) -> (String, Vec<S::Yield>, Option<S>)
+            where B: Fn(S::Yield) -> Option<S::Yield>,
+                  S::Yield: Display + Copy,
+                  S::Return: Display
+        {
+            let mut num = vec![];
+            let mut rest = None;
+            let message = each!(stream => i in {
+                if let Some(value) = should_break(i) {
+                    break value
+                } else {
+                    num.push(i)
+                }
+            } then with msg in {
+                format!("Finished: {}", msg)
+            } else with msg, gen rem in {
+                rest = Some(rem);
+                format!("Broken: {}", msg)
+            });
+            (message, num, rest)
+        }
+
+        // finishes normally
+        let bart = (3..10).wrap().map_return(|_| "I'm done!");
+        let (msg, num, rest) = run(bart, |x| if x > 20 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(msg, "Finished: I'm done!");
+        assert!(rest.is_none());
+
+        // is broken
+        let bart = (3..10).wrap().map_return(|_| "I'm done!");
+        let (msg, num, rest) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6]);
+        assert_eq!(msg, "Broken: 7");
+        let stream = rest.expect("The stream was broken, so there should be some left.");
+        let (msg, num, rest) = run(stream, |_| None);
+        assert_eq!(num, [8, 9]);
+        assert_eq!(msg, "Finished: I'm done!");
+        assert!(rest.is_none());
+
+        // is broken, otherwise would never finish
+        let bart = (3..).map_return(|_| "I'm done!");
+        let (msg, num, rest) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6]);
+        assert_eq!(msg, "Broken: 7");
+        let stream = rest.expect("The stream was broken, so there should be some left.");
+        let (msg, num, rest) = run(stream, |x| if x > 12 { Some(x) } else { None });
+        assert_eq!(num, [8, 9, 10, 11, 12]);
+        assert_eq!(msg, "Broken: 13");
+        assert!(rest.is_some());
+
+        // doesn't yield
+        /*
+        let bart = 3.done();
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, []);
+        assert_eq!(msg, "Finished: 3");
+        */
+    }
+
+    #[test]
+    fn each_1() {
+        use std::fmt::Display;
+
+        fn run<S: Generator, B>(stream: S, should_break: B) -> (String, Vec<S::Yield>)
             where B: Fn(S::Yield) -> Option<S::Yield>,
                   S::Yield: Display + Copy,
                   S::Return: Display
@@ -500,20 +617,183 @@ mod tests {
             (message, num)
         }
 
+        // finishes normally
         let bart = (3..10).wrap().map_return(|_| "I'm done!");
-        let (msg, num) = run_full(bart, |x| if x > 20 { Some(x) } else { None });
+        let (msg, num) = run(bart, |x| if x > 20 { Some(x) } else { None });
         assert_eq!(num, [3, 4, 5, 6, 7, 8, 9]);
         assert_eq!(msg, "Finished: I'm done!");
 
+        // is broken
         let bart = (3..10).wrap().map_return(|_| "I'm done!");
-        let (msg, num) = run_full(bart, |x| if x > 6 { Some(x) } else { None });
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
         assert_eq!(num, [3, 4, 5, 6]);
         assert_eq!(msg, "Broken: 7");
 
+        // is broken, otherwise would never finish
         let bart = (3..).map_return(|_| "I'm done!");
-        let (msg, num) = run_full(bart, |x| if x > 6 { Some(x) } else { None });
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
         assert_eq!(num, [3, 4, 5, 6]);
         assert_eq!(msg, "Broken: 7");
+
+        // doesn't yield
+        /*
+        let bart = 3.done();
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, []);
+        assert_eq!(msg, "Finished: 3");
+        */
+    }
+
+    #[test]
+    fn each_2() {
+        use std::fmt::Display;
+
+        fn run<S: Generator, B>(stream: S, should_break: B) -> (String, Vec<S::Yield>)
+            where B: Fn(S::Yield) -> Option<S::Yield>,
+                  S::Yield: Display + Copy,
+                  S::Return: Display
+        {
+            let mut num = vec![];
+            let message = each!(stream => i in {
+                if let Some(value) = should_break(i) {
+                    break value
+                } else {
+                    num.push(i)
+                }
+            } then with msg in {
+                format!("Finished: {}", msg)
+            } else with msg in {
+                format!("Broken: {}", msg)
+            });
+            (message, num)
+        }
+
+        // finishes normally
+        let bart = (3..10).wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x > 20 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(msg, "Finished: I'm done!");
+
+        // is broken
+        let bart = (3..10).wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6]);
+        assert_eq!(msg, "Broken: 7");
+
+        // is broken, otherwise would never finish
+        let bart = (3..).map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6]);
+        assert_eq!(msg, "Broken: 7");
+
+        // doesn't yield
+        /*
+        let bart = 3.done();
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, []);
+        assert_eq!(msg, "Finished: 3");
+        */
+    }
+
+    #[test]
+    fn each_3() {
+        use std::fmt::Display;
+
+        fn run<S: Generator, B>(stream: S, should_break: B) -> (String, Vec<S::Yield>)
+            where B: Fn(S::Yield) -> Option<S::Yield>,
+                  S::Yield: Display + Copy,
+                  S::Return: Display
+        {
+            let mut num = vec![];
+            let message = each!(stream => i in {
+                if let Some(value) = should_break(i) {
+                    break value
+                } else {
+                    num.push(i)
+                }
+            } then with msg in {
+                format!("Finished: {}", msg)
+            } else {
+                format!("Broken")
+            });
+            (message, num)
+        }
+
+        // finishes normally
+        let bart = (3..10).wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x > 20 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(msg, "Finished: I'm done!");
+
+        // is broken
+        let bart = (3..10).wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6]);
+        assert_eq!(msg, "Broken");
+
+        // is broken, otherwise would never finish
+        let bart = (3..).map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, [3, 4, 5, 6]);
+        assert_eq!(msg, "Broken");
+
+        // doesn't yield
+        /*
+        let bart = 3.done();
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, []);
+        assert_eq!(msg, "Finished: 3");
+        */
+    }
+
+    #[test]
+    fn each_4() {
+        use std::fmt::Display;
+
+        fn run<S: Generator, B>(stream: S, should_break: B) -> (String, Vec<S::Yield>)
+            where B: Fn(S::Yield) -> Option<S::Yield>,
+                  S::Yield: Display + Copy,
+                  S::Return: Display
+        {
+            let mut num = vec![];
+            let message = each!(stream => i in {
+                if let Some(value) = should_break(i) {
+                    break format!("{}", value)
+                } else {
+                    num.push(i)
+                }
+            } then with msg in {
+                format!("Finished: {}", msg)
+            });
+            (message, num)
+        }
+
+        // finishes normally
+        let base = ["Hello", "World!"];
+        let bart = base.iter().wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |_| None);
+        assert_eq!(num, [&"Hello", &"World!"]);
+        assert_eq!(msg, "Finished: I'm done!");
+
+        // is broken
+        let bart = base.iter().wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| Some(x));
+        assert!(num.is_empty());
+        assert_eq!(msg, "Hello");
+
+        // is broken later
+        let bart = base.iter().wrap().map_return(|_| "I'm done!");
+        let (msg, num) = run(bart, |x| if x == &"World!" { Some(x) } else { None });
+        assert_eq!(num, [&"Hello"]);
+        assert_eq!(msg, "World!");
+
+        // doesn't yield
+        /*
+        let bart = 3.done();
+        let (msg, num) = run(bart, |x| if x > 6 { Some(x) } else { None });
+        assert_eq!(num, []);
+        assert_eq!(msg, "Finished: 3");
+        */
     }
 
     #[test]
