@@ -1,3 +1,4 @@
+#![macro_use]
 
 pub enum Match<V, O: Enum> {
     Variant(V),
@@ -19,17 +20,25 @@ impl<V, E: Enum> Enum for Match<V, E> {
     type Next = E;
 }
 
+#[macro_export]
+macro_rules! enums {
+    ($head:ty, $($tail:ty),+) => {
+        $crate::enums::Match<$head, enums![ $($tail),* ]>
+    };
+
+    ($head:ty) => {
+        $crate::enums::Match<$head, !>
+    };
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::{Match};
     #[test]
     fn enum_once() {
-        type Vars = Match<i32,
-                    Match<&'static str,
-                    Match<f64,
-                    !>>>;
-        use self::Match::*;
+        use enums::Match::*;
+        type Vars = enums![i32, &'static str, f64];
         let integer: Vars = Variant(42);
         let string = Next(Variant("Happy!"));
         let float = Next(Next(Variant(42.0)));

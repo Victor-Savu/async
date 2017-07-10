@@ -50,17 +50,17 @@ impl<Output> Coroutine<Output> for ! {
 #[cfg(test)]
 mod tests {
 
+    #![macro_use]
+
     use super::{Coroutine, CoResult};
     use enums::Match::*;
-    use enums::Match;
 
     struct Guess(i64);
 
     impl Coroutine<&'static str> for Guess {
         type Input = i64;
-        type Suspend = Match<(&'static str, Guess),
-                       Match<(&'static str, Guess),
-                       !>>;
+
+        type Suspend = enums![(&'static str, Guess), (&'static str, Guess)];
 
         fn send(self, i: Self::Input) -> CoResult<Self::Suspend, &'static str> {
             if self.0 == i {
