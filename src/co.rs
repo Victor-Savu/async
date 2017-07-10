@@ -1,22 +1,26 @@
-use either::Either;
+use enums::Enum;
 
 
 pub trait CoSuspend<Output> {
     type Yield;
     type Continuation: Coroutine<Output>;
     type Suspension: CoSuspend<Output>;
-
-    fn get(self) -> Either<(Self::Yield, Self::Continuation), Self::Suspension>;
 }
 
 impl<Output> CoSuspend<Output> for ! {
     type Yield = !;
     type Continuation = !;
     type Suspension = !;
+}
 
-    fn get(self) -> Either<(Self::Yield, Self::Continuation), Self::Suspension> {
-        unreachable!()
-    }
+impl<Output, Enumeration, Y, C> CoSuspend<Output> for Enumeration
+    where C: Coroutine<Output>,
+          Enumeration: Enum<Variant = (Y, C)>,
+          Enumeration::Next: CoSuspend<Output>
+{
+    type Yield = Y;
+    type Continuation = C;
+    type Suspension = Enumeration::Next;
 }
 
 pub enum CoResult<Suspend, Output>
@@ -46,63 +50,25 @@ impl<Output> Coroutine<Output> for ! {
 #[cfg(test)]
 mod tests {
 
-    use super::{Coroutine, CoSuspend, CoResult};
-    use either::Either;
+    use super::{Coroutine, CoResult};
+    use enums::Match::*;
+    use enums::Match;
 
     struct Guess(i64);
 
-    struct Retry {
-        too_small: bool,
-        guess: Guess,
-    }
-
-    impl Retry {
-        fn too_small(guess: Guess) -> Self {
-            Retry { too_small: true, guess }
-        }
-
-        fn too_big(guess: Guess) -> Self {
-            Retry { too_small: false, guess }
-        }
-    }
-
-    struct TooBig(Guess);
-
-    impl CoSuspend<&'static str> for TooBig {
-        type Yield = &'static str;
-        type Continuation = Guess;
-        type Suspension = !;
-
-        fn get(self) -> Either<(Self::Yield, Self::Continuation), Self::Suspension> {
-            Either::Former(("Too big!", self.0))
-        }
-    }
-
-    impl CoSuspend<&'static str> for Retry {
-        type Yield = &'static str;
-        type Continuation = Guess;
-        type Suspension = TooBig;
-
-        fn get(self) -> Either<(Self::Yield, Self::Continuation), Self::Suspension> {
-            if self.too_small {
-                Either::Former(("Too small!", self.guess))
-            } else {
-                Either::Latter(TooBig(self.guess))
-            }
-        }
-    }
-
     impl Coroutine<&'static str> for Guess {
         type Input = i64;
-        type Suspend = Retry;
+        type Suspend = Match<(&'static str, Guess),
+                       Match<(&'static str, Guess),
+                       !>>;
 
         fn send(self, i: Self::Input) -> CoResult<Self::Suspend, &'static str> {
             if self.0 == i {
                 CoResult::Return("You guessed it!")
             } else if i < self.0 {
-                CoResult::Suspend(Retry::too_small(self))
+                CoResult::Suspend(Variant(("Too small!", self)))
             } else {
-                CoResult::Suspend(Retry::too_big(self))
+                CoResult::Suspend(Next(Variant(("Too big!", self))))
             }
         }
     }
@@ -136,12 +102,12 @@ mod tests {
             _ => panic!("We didn't guess the number, so the coroutine should not return yet!"),
         };
 
-        let game = match suspend.get() {
-            Either::Former((msg, guess_again)) => {
+        let game = match suspend {
+            Variant((msg, guess_again)) => {
                 assert_eq!(msg, "Too small!");
                 guess_again
-            },
-            _ => panic!("The number was clearly too small! Why do you not see this?")
+            }
+            _ => panic!("The number was clearly too small! Why do you not see this?"),
         };
 
         let suspend = match game.send(19) {
@@ -149,21 +115,17 @@ mod tests {
             _ => panic!("We didn't guess the number, so the coroutine should not return yet!"),
         };
 
-        let suspend = match suspend.get() {
-            Either::Latter(suspend) => suspend,
-            _ => panic!("The number was clearly too big! Why do you not see this?")
-        };
-
-        let game = match suspend.get() {
-            Either::Former((msg, guess_again)) => {
+        let game = match suspend {
+            Next(Variant((msg, guess_again))) => {
                 assert_eq!(msg, "Too big!");
                 guess_again
             }
+            _ => panic!("The number was clearly too big! Why do you not see this?"),
         };
-            
+
         match game.send(16) {
             CoResult::Return(msg) => assert_eq!(msg, "You guessed it!"),
-            _ => panic!("The answer was correct! The coroutine should return.")
+            _ => panic!("The answer was correct! The coroutine should return."),
         }
     }
 }
