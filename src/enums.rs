@@ -34,7 +34,6 @@ macro_rules! enums {
 #[cfg(test)]
 mod tests {
 
-    use super::{Match};
     #[test]
     fn enum_once() {
         use enums::Match::*;
