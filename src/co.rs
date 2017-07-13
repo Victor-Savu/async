@@ -1,49 +1,74 @@
+use std::marker::PhantomData;
 use enums::Enum;
 
 
-pub trait CoSuspend<Output> {
+pub trait CoSuspend {
     type Yield;
-    type Continuation: Coroutine<Output>;
-    type Suspension: CoSuspend<Output>;
+    type Output;
+    type Continuation: Coroutine<Output = Self::Output>;
+    type Suspension: CoSuspend<Output = Self::Output>;
 }
 
-impl<Output> CoSuspend<Output> for ! {
+pub struct NeverReach<Output>(PhantomData<Output>);
+
+impl<T> Enum for NeverReach<T> {
+    type Variant = !;
+    type Next = !;
+}
+
+#[macro_export]
+macro_rules! suspend {
+    ($head:ty, $(($taily:ty, $tailc:ty)),+) => {
+        $crate::enums::Match<$head, suspend![ $(($taily, $tailc)),* ]>
+    };
+
+    (($yields:ty, $continues:ty)) => {
+        $crate::enums::Match<($yields, $continues), $crate::co::NeverReach<<$continues as $crate::co::Coroutine>::Output>>
+    };
+}
+
+
+impl<T> CoSuspend for NeverReach<T> {
     type Yield = !;
-    type Continuation = !;
-    type Suspension = !;
+    type Output = T;
+    type Continuation = Self;
+    type Suspension = Self;
 }
 
-impl<Output, Enumeration, Y, C> CoSuspend<Output> for Enumeration
-    where C: Coroutine<Output>,
+impl<T> Coroutine for NeverReach<T> {
+    type Input = !;
+    type Output = T;
+    type Suspend = Self;
+
+    fn send(self, _: Self::Input) -> CoResult<Self::Suspend> {
+        unreachable!()
+    }
+}
+
+impl<Enumeration, Y, C> CoSuspend for Enumeration
+    where C: Coroutine,
           Enumeration: Enum<Variant = (Y, C)>,
-          Enumeration::Next: CoSuspend<Output>
+          Enumeration::Next: CoSuspend<Output = C::Output>
 {
     type Yield = Y;
+    type Output = C::Output;
     type Continuation = C;
     type Suspension = Enumeration::Next;
 }
 
-pub enum CoResult<Suspend, Output>
-    where Suspend: CoSuspend<Output>
+pub enum CoResult<Suspend>
+    where Suspend: CoSuspend
 {
     Suspend(Suspend),
-    Return(Output),
+    Return(Suspend::Output),
 }
 
-pub trait Coroutine<Output>: Sized {
+pub trait Coroutine: Sized {
     type Input;
-    type Suspend: CoSuspend<Output>;
+    type Output;
+    type Suspend: CoSuspend<Output = Self::Output>;
 
-    fn send(self, i: Self::Input) -> CoResult<Self::Suspend, Output>;
-}
-
-impl<Output> Coroutine<Output> for ! {
-    type Input = !;
-    type Suspend = !;
-
-    fn send(self, _: Self::Input) -> CoResult<Self::Suspend, Output> {
-        unreachable!()
-    }
+    fn send(self, i: Self::Input) -> CoResult<Self::Suspend>;
 }
 
 
@@ -57,12 +82,13 @@ mod tests {
 
     struct Guess(i64);
 
-    impl Coroutine<&'static str> for Guess {
+    impl Coroutine for Guess {
         type Input = i64;
+        type Output = &'static str;
 
-        type Suspend = enums![(&'static str, Guess), (&'static str, Guess)];
+        type Suspend = suspend![(&'static str, Guess), (&'static str, Guess)];
 
-        fn send(self, i: Self::Input) -> CoResult<Self::Suspend, &'static str> {
+        fn send(self, i: Self::Input) -> CoResult<Self::Suspend> {
             if self.0 == i {
                 CoResult::Return("You guessed it!")
             } else if i < self.0 {
