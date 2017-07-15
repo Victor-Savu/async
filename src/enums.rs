@@ -22,12 +22,16 @@ impl<V, E: Enum> Enum for Match<V, E> {
 
 #[macro_export]
 macro_rules! enums {
-    ($head:ty, $($tail:ty),+) => {
-        $crate::enums::Match<$head, enums![ $($tail),* ]>
+    ($head:ty, $($tail:ty),+; $end:ty) => {
+        $crate::enums::Match<$head, enums![ $($tail),*; $end ]>
     };
 
-    ($head:ty) => {
-        $crate::enums::Match<$head, !>
+    ($head:ty; $end:ty) => {
+        $crate::enums::Match<$head, $end>
+    };
+
+    ($($tail:ty),*) => {
+        enums![ $($tail),*; ! ]
     };
 }
 

@@ -18,12 +18,9 @@ impl<T> Enum for NeverReach<T> {
 
 #[macro_export]
 macro_rules! suspend {
-    ($head:ty, $(($taily:ty, $tailc:ty)),+) => {
-        $crate::enums::Match<$head, suspend![ $(($taily, $tailc)),* ]>
-    };
-
-    (($yields:ty, $continues:ty)) => {
-        $crate::enums::Match<($yields, $continues), $crate::co::NeverReach<<$continues as $crate::co::Coroutine>::Output>>
+    (($heady:ty, $headc:ty), $(($taily:ty, $tailc:ty)),*) => {
+        enums![ ($heady, $headc), $(($taily, $tailc)),*;
+                $crate::co::NeverReach<<$headc as $crate::co::Coroutine>::Output> ]
     };
 }
 
