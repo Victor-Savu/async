@@ -1,54 +1,51 @@
 use enums::Enum;
 
 
-pub trait CoSuspend {
-    type Yield;
-    type Output;
-    type Continuation: Coroutine;
-    type Suspension: CoSuspend;
+pub trait ContinuationSet {
+    type Emit;
+    type Continue: State;
+    type Suspend: ContinuationSet;
 }
 
-impl CoSuspend for ! {
-    type Yield = !;
-    type Output = !;
-    type Continuation = !;
-    type Suspension = !;
-}
-
-impl Coroutine for ! {
-    type Input = !;
-    type Output = !;
+impl ContinuationSet for ! {
+    type Emit = !;
+    type Continue = !;
     type Suspend = !;
+}
 
-    fn send(self, _: Self::Input) -> CoResult<Self::Suspend, Self::Output> {
+impl State for ! {
+    type Input = !;
+    type Exit = !;
+    type Next = !;
+
+    fn send(self, _: Self::Input) -> Transition<Self::Next, Self::Exit> {
         unreachable!()
     }
 }
 
-impl<Enumeration, Y, C> CoSuspend for Enumeration
-    where C: Coroutine,
+impl<Enumeration, Y, C> ContinuationSet for Enumeration
+    where C: State,
           Enumeration: Enum<Variant = (Y, C)>,
-          Enumeration::Next: CoSuspend
+          Enumeration::Next: ContinuationSet
 {
-    type Yield = Y;
-    type Output = C::Output;
-    type Continuation = C;
-    type Suspension = Enumeration::Next;
+    type Emit = Y;
+    type Continue = C;
+    type Suspend = Enumeration::Next;
 }
 
-pub enum CoResult<Suspend, Return>
-    where Suspend: CoSuspend
+pub enum Transition<Next, Return>
+    where Next: ContinuationSet
 {
-    Suspend(Suspend),
+    Next(Next),
     Return(Return),
 }
 
-pub trait Coroutine: Sized {
+pub trait State: Sized {
     type Input;
-    type Output;
-    type Suspend: CoSuspend;
+    type Exit;
+    type Next: ContinuationSet;
 
-    fn send(self, i: Self::Input) -> CoResult<Self::Suspend, Self::Output>;
+    fn send(self, i: Self::Input) -> Transition<Self::Next, Self::Exit>;
 }
 
 
@@ -57,7 +54,7 @@ mod tests {
 
     #![macro_use]
 
-    use super::{Coroutine, CoResult};
+    use super::{State, Transition};
     use enums::Match::*;
     use std::fmt;
 
@@ -87,33 +84,33 @@ mod tests {
 
     struct Guess(i64);
 
-    impl Coroutine for Guess {
+    impl State for Guess {
         type Input = i64;
-        type Output = Correct;
+        type Exit = Correct;
 
-        type Suspend = enums![(TooSmall, Guess), (TooBig, Guess)];
+        type Next = enums![(TooSmall, Guess), (TooBig, Guess)];
 
-        fn send(self, i: Self::Input) -> CoResult<Self::Suspend, Self::Output> {
+        fn send(self, i: Self::Input) -> Transition<Self::Next, Self::Exit> {
             if self.0 == i {
-                CoResult::Return(Correct {})
+                Transition::Return(Correct {})
             } else if i < self.0 {
-                CoResult::Suspend(Variant((TooSmall {}, self)))
+                Transition::Next(Variant((TooSmall {}, self)))
             } else {
-                CoResult::Suspend(Next(Variant((TooBig {}, self))))
+                Transition::Next(Next(Variant((TooBig {}, self))))
             }
         }
     }
 
     struct Game;
 
-    impl Coroutine for Game {
+    impl State for Game {
         type Input = i64;
-        type Output = !;
+        type Exit = !;
 
-        type Suspend = enums![((), Guess)];
+        type Next = enums![((), Guess)];
 
-        fn send(self, secret: Self::Input) -> CoResult<Self::Suspend, Self::Output> {
-            CoResult::Suspend(Variant(((), Guess(secret))))
+        fn send(self, secret: Self::Input) -> Transition<Self::Next, Self::Exit> {
+            Transition::Next(Variant(((), Guess(secret))))
         }
     }
 
@@ -127,31 +124,31 @@ mod tests {
 
     struct Maverick;
 
-    impl Coroutine for Maverick {
+    impl State for Maverick {
         type Input = (i64, i64);
-        type Output = Quit;
+        type Exit = Quit;
 
-        type Suspend = enums![(i64, Strategist)];
+        type Next = enums![(i64, Strategist)];
 
-        fn send(self, range: Self::Input) -> CoResult<Self::Suspend, Self::Output> {
+        fn send(self, range: Self::Input) -> Transition<Self::Next, Self::Exit> {
             if range.0 > range.1 {
-                CoResult::Return(Quit {})
+                Transition::Return(Quit {})
             } else {
                 let guess = (range.0 + range.1) / 2;
-                CoResult::Suspend(Variant((guess, Strategist(range.0, guess, range.1))))
+                Transition::Next(Variant((guess, Strategist(range.0, guess, range.1))))
             }
         }
     }
 
     struct Strategist(i64, i64, i64);
 
-    impl Coroutine for Strategist {
+    impl State for Strategist {
         type Input = enums![TooSmall, TooBig];
-        type Output = Quit;
+        type Exit = Quit;
 
-        type Suspend = enums![(i64, Strategist)];
+        type Next = enums![(i64, Strategist)];
 
-        fn send(self, result: Self::Input) -> CoResult<Self::Suspend, Self::Output> {
+        fn send(self, result: Self::Input) -> Transition<Self::Next, Self::Exit> {
             let mav = Maverick {};
             let range = match result {
                 Variant(TooSmall) => (self.1 + 1, self.2),
@@ -193,11 +190,11 @@ mod tests {
         let game = Game {};
 
         let game = match game.send(16) {
-            CoResult::Suspend(Variant(((), game))) => game,
+            Transition::Next(Variant(((), game))) => game,
         };
 
         let suspend = match game.send(10) {
-            CoResult::Suspend(suspend) => suspend,
+            Transition::Next(suspend) => suspend,
             _ => panic!("We didn't guess the number, so the coroutine should not return yet!"),
         };
 
@@ -210,7 +207,7 @@ mod tests {
         };
 
         let suspend = match game.send(19) {
-            CoResult::Suspend(suspend) => suspend,
+            Transition::Next(suspend) => suspend,
             _ => panic!("We didn't guess the number, so the coroutine should not return yet!"),
         };
 
@@ -223,7 +220,7 @@ mod tests {
         };
 
         match game.send(16) {
-            CoResult::Return(msg) => assert_eq!(msg.to_string(), "You guessed it!"),
+            Transition::Return(msg) => assert_eq!(msg.to_string(), "You guessed it!"),
             _ => panic!("The answer was correct! The coroutine should return."),
         }
     }
@@ -235,27 +232,27 @@ mod tests {
 
     fn play(secret: i64, lo: i64, hi: i64) -> Finish<Correct, Quit> {
         let (_, mut game) = match (Game {}.send(secret)) {
-            CoResult::Suspend(Variant(s)) => s,
+            Transition::Next(Variant(s)) => s,
         };
 
         let player = Maverick {};
 
         let (mut guess, mut player) = match player.send((lo, hi)) {
-            CoResult::Suspend(Variant(x)) => x,
-            CoResult::Return(_) => panic!("The range is valid, why did you return?"),
+            Transition::Next(Variant(x)) => x,
+            Transition::Return(_) => panic!("The range is valid, why did you return?"),
         };
 
 
         loop {
             let (result, game_) = match game.send(guess) {
-                CoResult::Suspend(Variant((r, g))) => (Variant(r), g),
-                CoResult::Suspend(Next(Variant((r, g)))) => (Next(Variant(r)), g),
-                CoResult::Return(r) => break Finish::GameWon(r),
+                Transition::Next(Variant((r, g))) => (Variant(r), g),
+                Transition::Next(Next(Variant((r, g)))) => (Next(Variant(r)), g),
+                Transition::Return(r) => break Finish::GameWon(r),
             };
             game = game_;
             let (guess_, player_) = match player.send(result) {
-                CoResult::Suspend(Variant(s)) => s,
-                CoResult::Return(r) => break Finish::PlayerGaveUp(r),
+                Transition::Next(Variant(s)) => s,
+                Transition::Return(r) => break Finish::PlayerGaveUp(r),
             };
             guess = guess_;
             player = player_;
