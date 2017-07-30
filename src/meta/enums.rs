@@ -1,33 +1,41 @@
 #![macro_use]
 
-pub enum Match<V, O: Enum> {
-    Variant(V),
-    Next(O),
+use meta::list::List;
+
+pub enum Match<A, B> {
+    Variant(A),
+    Next(B),
 }
 
-pub trait Enum {
-    type Variant;
-    type Next: Enum;
+pub trait Enum: List {
+    fn split(self) -> Match<Self::Head, Self::Next>;
 }
 
 impl Enum for ! {
-    type Variant = !;
-    type Next = !;
+    fn split(self) -> Match<Self::Head, Self::Next> {
+        unreachable!()
+    }
 }
 
-impl<V, E: Enum> Enum for Match<V, E> {
-    type Variant = V;
-    type Next = E;
+impl<A, B: Enum> List for Match<A, B> {
+    type Head = A;
+    type Next = B;
+}
+
+impl<A, B> Enum for Match<A, B> where B: Enum {
+    fn split(self) -> Match<Self::Head, Self::Next> {
+        self
+    }
 }
 
 #[macro_export]
 macro_rules! enums {
     ($head:ty, $($tail:ty),+; $end:ty) => {
-        $crate::enums::Match<$head, enums![ $($tail),*; $end ]>
+        $crate::meta::enums::Match<$head, enums![ $($tail),*; $end ]>
     };
 
     ($head:ty; $end:ty) => {
-        $crate::enums::Match<$head, $end>
+        $crate::meta::enums::Match<$head, $end>
     };
 
     ($($tail:ty),*) => {
@@ -40,7 +48,7 @@ mod tests {
 
     #[test]
     fn enum_once() {
-        use enums::Match::*;
+        use meta::enums::Match::*;
         type Vars = enums![i32, &'static str, f64];
         let integer: Vars = Variant(42);
         let string = Next(Variant("Happy!"));

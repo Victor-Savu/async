@@ -7,7 +7,7 @@ pub mod each;
 pub mod gen;
 pub mod comb;
 pub mod either;
-pub mod enums;
+pub mod meta;
 pub mod iter;
 pub mod map;
 pub mod fsm;

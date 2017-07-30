@@ -1,4 +1,4 @@
-use enums::Enum;
+use meta::enums::Enum;
 
 
 pub trait ContinuationSet {
@@ -25,7 +25,7 @@ impl State for ! {
 
 impl<Enumeration, Y, C> ContinuationSet for Enumeration
     where C: State,
-          Enumeration: Enum<Variant = (Y, C)>,
+          Enumeration: Enum<Head = (Y, C)>,
           Enumeration::Next: ContinuationSet
 {
     type Emit = Y;
@@ -55,7 +55,7 @@ mod tests {
     #![macro_use]
 
     use super::{State, Transition};
-    use enums::Match::*;
+    use meta::enums::Match::*;
     use std::fmt;
 
     struct TooSmall;
