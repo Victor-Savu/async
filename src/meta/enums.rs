@@ -1,29 +1,29 @@
 #![macro_use]
 
-use meta::list::List;
+use meta::list::TypeList;
 
 pub enum Match<A, B> {
     Variant(A),
     Next(B),
 }
 
-pub trait Enum: List {
-    fn split(self) -> Match<Self::Head, Self::Next>;
+pub trait Enum: TypeList {
+    fn split(self) -> Match<Self::Head, Self::Tail>;
 }
 
 impl Enum for ! {
-    fn split(self) -> Match<Self::Head, Self::Next> {
+    fn split(self) -> Match<Self::Head, Self::Tail> {
         unreachable!()
     }
 }
 
-impl<A, B: Enum> List for Match<A, B> {
+impl<A, B> TypeList for Match<A, B> where B: TypeList {
     type Head = A;
-    type Next = B;
+    type Tail = B;
 }
 
 impl<A, B> Enum for Match<A, B> where B: Enum {
-    fn split(self) -> Match<Self::Head, Self::Next> {
+    fn split(self) -> Match<Self::Head, Self::Tail> {
         self
     }
 }

@@ -1,9 +1,13 @@
-pub trait List {
+pub trait TypeList {
     type Head;
-    type Next: List;
+    type Tail: TypeList;
 }
 
-impl List for ! {
+impl TypeList for ! {
     type Head = !;
-    type Next = !;
+    type Tail = !;
+}
+
+pub trait List : TypeList {
+    fn split(self) -> (Self::Head, Self::Tail);
 }

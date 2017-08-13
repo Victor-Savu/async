@@ -13,24 +13,14 @@ impl ContinuationSet for ! {
     type Suspend = !;
 }
 
-impl State for ! {
-    type Input = !;
-    type Exit = !;
-    type Next = !;
-
-    fn send(self, _: Self::Input) -> Transition<Self::Next, Self::Exit> {
-        unreachable!()
-    }
-}
-
 impl<Enumeration, Y, C> ContinuationSet for Enumeration
     where C: State,
           Enumeration: Enum<Head = (Y, C)>,
-          Enumeration::Next: ContinuationSet
+          Enumeration::Tail: ContinuationSet
 {
     type Emit = Y;
     type Continue = C;
-    type Suspend = Enumeration::Next;
+    type Suspend = Enumeration::Tail;
 }
 
 pub enum Transition<Next, Return>
@@ -48,6 +38,15 @@ pub trait State: Sized {
     fn send(self, i: Self::Input) -> Transition<Self::Next, Self::Exit>;
 }
 
+impl State for ! {
+    type Input = !;
+    type Exit = !;
+    type Next = !;
+
+    fn send(self, _: Self::Input) -> Transition<Self::Next, Self::Exit> {
+        unreachable!()
+    }
+}
 
 #[cfg(test)]
 mod tests {
