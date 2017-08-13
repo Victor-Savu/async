@@ -54,7 +54,7 @@ mod tests {
     #![macro_use]
 
     use super::{State, Transition};
-    use meta::enums::Match::*;
+    use meta::matches::Match::*;
     use std::fmt;
 
     struct TooSmall;

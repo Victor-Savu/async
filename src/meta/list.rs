@@ -1,3 +1,5 @@
+use meta::matches::Match;
+
 pub trait TypeList {
     type Head;
     type Tail: TypeList;
@@ -8,6 +10,17 @@ impl TypeList for ! {
     type Tail = !;
 }
 
-pub trait List : TypeList {
-    fn split(self) -> (Self::Head, Self::Tail);
+impl TypeList for () {
+    type Head = ();
+    type Tail = ();
+}
+
+impl<A, B> TypeList for Match<A, B> where B: TypeList {
+    type Head = A;
+    type Tail = B;
+}
+
+impl<A, B> TypeList for (A, B) where B: TypeList {
+    type Head = A;
+    type Tail = B;
 }

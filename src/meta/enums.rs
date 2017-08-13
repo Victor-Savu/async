@@ -1,11 +1,7 @@
 #![macro_use]
 
+use meta::matches::Match;
 use meta::list::TypeList;
-
-pub enum Match<A, B> {
-    Variant(A),
-    Next(B),
-}
 
 pub trait Enum: TypeList {
     fn split(self) -> Match<Self::Head, Self::Tail>;
@@ -17,11 +13,6 @@ impl Enum for ! {
     }
 }
 
-impl<A, B> TypeList for Match<A, B> where B: TypeList {
-    type Head = A;
-    type Tail = B;
-}
-
 impl<A, B> Enum for Match<A, B> where B: Enum {
     fn split(self) -> Match<Self::Head, Self::Tail> {
         self
@@ -31,11 +22,11 @@ impl<A, B> Enum for Match<A, B> where B: Enum {
 #[macro_export]
 macro_rules! enums {
     ($head:ty, $($tail:ty),+; $end:ty) => {
-        $crate::meta::enums::Match<$head, enums![ $($tail),*; $end ]>
+        $crate::meta::matches::Match<$head, enums![ $($tail),*; $end ]>
     };
 
     ($head:ty; $end:ty) => {
-        $crate::meta::enums::Match<$head, $end>
+        $crate::meta::matches::Match<$head, $end>
     };
 
     ($($tail:ty),*) => {
@@ -48,7 +39,7 @@ mod tests {
 
     #[test]
     fn enum_once() {
-        use meta::enums::Match::*;
+        use meta::matches::Match::*;
         type Vars = enums![i32, &'static str, f64];
         let integer: Vars = Variant(42);
         let string = Next(Variant("Happy!"));
