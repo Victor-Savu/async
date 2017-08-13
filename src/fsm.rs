@@ -36,6 +36,8 @@ impl<Next, Exit> Enum for Transition<Next, Exit>
 {
     type Head = Next;
     type Tail = (Exit,);
+    type Output = Match<Self::Head, Self::Tail>;
+
     fn split(self) -> Match<Self::Head, Self::Tail> {
         match self {
             Transition::Next(next) => Match::Variant(next),

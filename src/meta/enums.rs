@@ -1,19 +1,22 @@
 #![macro_use]
 
+use meta::sum::Sum;
 use meta::matches::Match;
 
 pub trait Enum {
     type Head;
     type Tail: Enum;
+    type Output: Sum<Left=Self::Head, Right=Self::Tail>;
 
-    fn split(self) -> Match<Self::Head, Self::Tail>;
+    fn split(self) -> Self::Output;
 }
 
 impl Enum for ! {
     type Head = !;
     type Tail = !;
+    type Output = !;
 
-    fn split(self) -> Match<Self::Head, Self::Tail> {
+    fn split(self) -> Self::Output {
         unreachable!()
     }
 }
@@ -23,8 +26,9 @@ impl<A, B> Enum for Match<A, B>
 {
     type Head = A;
     type Tail = B;
+    type Output = Self;
 
-    fn split(self) -> Match<Self::Head, Self::Tail> {
+    fn split(self) -> Self::Output {
         self
     }
 }
@@ -32,9 +36,10 @@ impl<A, B> Enum for Match<A, B>
 impl<A> Enum for (A,) {
     type Head = A;
     type Tail = !;
+    type Output = Self;
 
-    fn split(self) -> Match<Self::Head, Self::Tail> {
-        Match::Variant(self.0)
+    fn split(self) -> Self::Output {
+        self
     }
 }
 
