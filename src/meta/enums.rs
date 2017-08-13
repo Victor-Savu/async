@@ -1,6 +1,6 @@
 #![macro_use]
 
-use meta::sum::Sum;
+use meta::sum::{Sum, Left};
 use meta::matches::Match;
 
 pub trait Enum {
@@ -36,10 +36,10 @@ impl<A, B> Enum for Match<A, B>
 impl<A> Enum for (A,) {
     type Head = A;
     type Tail = !;
-    type Output = Self;
+    type Output = Left<A>;
 
     fn split(self) -> Self::Output {
-        self
+        Left(self.0)
     }
 }
 

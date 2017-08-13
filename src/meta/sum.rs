@@ -26,12 +26,24 @@ impl<A, B> Sum for Match<A, B>
     }
 }
 
-impl<A> Sum for (A,)
-{
+pub struct Left<A>(pub A);
+
+impl<A> Sum for Left<A> {
     type Left = A;
     type Right = !;
 
     fn to_canonical(self) -> Match<Self::Left, Self::Right> {
         Match::Variant(self.0)
+    }
+}
+
+pub struct Right<A>(pub A);
+
+impl<A> Sum for Right<A> {
+    type Left = !;
+    type Right = A;
+
+    fn to_canonical(self) -> Match<Self::Left, Self::Right> {
+        Match::Next(self.0)
     }
 }
