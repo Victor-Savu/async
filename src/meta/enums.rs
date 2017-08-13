@@ -1,8 +1,23 @@
 #![macro_use]
 
-use meta::sum::{Sum, Left};
-use meta::matches::Match;
+use meta::sum::{Sum, Left, Either};
 
+pub enum Match<A, B> {
+    Variant(A),
+    Next(B),
+}
+
+impl<A, B> Sum for Match<A, B> {
+    type Left = A;
+    type Right = B;
+
+    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
+        match self {
+            Match::Variant(var) => Either::Left(var),
+            Match::Next(next) => Either::Right(next),
+        }
+    }
+}
 pub trait Enum {
     type Head;
     type Tail: Enum;
@@ -39,18 +54,18 @@ impl<A> Enum for (A,) {
     type Output = Left<A>;
 
     fn split(self) -> Self::Output {
-        Left(self.0)
+        Either::Left(self.0)
     }
 }
 
 #[macro_export]
 macro_rules! enums {
     ($head:ty, $($tail:ty),+; $end:ty) => {
-        $crate::meta::matches::Match<$head, enums![ $($tail),*; $end ]>
+        $crate::meta::enums::Match<$head, enums![ $($tail),*; $end ]>
     };
 
     ($head:ty; $end:ty) => {
-        $crate::meta::matches::Match<$head, $end>
+        $crate::meta::enums::Match<$head, $end>
     };
 
     ($($tail:ty),*) => {
@@ -63,7 +78,7 @@ mod tests {
 
     #[test]
     fn enum_once() {
-        use meta::matches::Match::*;
+        use meta::enums::Match::*;
         type Vars = enums![i32, &'static str, f64];
         let integer: Vars = Variant(42);
         let string = Next(Variant("Happy!"));

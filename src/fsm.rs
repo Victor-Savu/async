@@ -50,9 +50,8 @@ mod tests {
     #![macro_use]
 
     use super::{State, ContinuationSet};
-    use meta::matches::Match::*;
-    use meta::matches::Match;
-    use meta::sum::Sum;
+    use meta::enums::Match::*;
+    use meta::sum::{Sum, Either};
     use std::fmt;
 
     pub enum Transition<Next, Exit>
@@ -68,10 +67,10 @@ mod tests {
         type Left = Next;
         type Right = Exit;
 
-        fn to_canonical(self) -> Match<Self::Left, Self::Right> {
+        fn to_canonical(self) -> Either<Self::Left, Self::Right> {
             match self {
-                Transition::Next(next) => Match::Variant(next),
-                Transition::Exit(exit) => Match::Next(exit),
+                Transition::Next(next) => Either::Left(next),
+                Transition::Exit(exit) => Either::Right(exit),
             }
         }
     }
