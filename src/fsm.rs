@@ -1,4 +1,5 @@
-use meta::enums::{Enum, Either};
+use meta::enums::Enum;
+use meta::sum::Sum;
 use meta::matches::Match;
 
 
@@ -31,34 +32,27 @@ pub enum Transition<Next, Exit>
     Exit(Exit),
 }
 
-impl<Next, Exit> Enum for Transition<Next, Exit>
+impl<Next, Exit> Sum for Transition<Next, Exit>
     where Next: ContinuationSet
 {
-    type Head = Next;
-    type Tail = (Exit,);
-    type Output = Match<Self::Head, Self::Tail>;
+    type Left = Next;
+    type Right = Exit;
 
-    fn split(self) -> Match<Self::Head, Self::Tail> {
+    fn to_canonical(self) -> Match<Self::Left, Self::Right> {
         match self {
             Transition::Next(next) => Match::Variant(next),
-            Transition::Exit(exit) => Match::Next((exit,)),
+            Transition::Exit(exit) => Match::Next(exit),
         }
     }
-}
-
-impl<Next, Exit> Either<Next, Exit> for Transition<Next, Exit> where Next: ContinuationSet
-{
-    type EitherTail = (Exit,);
-    type Output = Self;
 }
 
 pub trait State: Sized {
     type Input;
     type Exit;
     type Next: ContinuationSet;
-    type Transition: Either<Self::Next, Self::Exit>;
+    type Transition: Sum<Left=Self::Next, Right=Self::Exit>;
 
-    fn send(self, i: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output;
+    fn send(self, i: Self::Input) -> Self::Transition;
 }
 
 impl State for ! {
@@ -67,7 +61,7 @@ impl State for ! {
     type Next = !;
     type Transition = !;
 
-    fn send(self, _: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+    fn send(self, _: Self::Input) -> Self::Transition
     {
         unreachable!()
     }
@@ -81,7 +75,6 @@ mod tests {
     use super::{State, Transition};
     use meta::matches::Match::*;
     use std::fmt;
-    use meta::enums::Either;
 
     struct TooSmall;
 
@@ -116,7 +109,7 @@ mod tests {
         type Next = enums![(TooSmall, Guess), (TooBig, Guess)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, i: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        fn send(self, i: Self::Input) -> Self::Transition
         {
             if self.0 == i {
                 Transition::Exit(Correct {})
@@ -137,7 +130,7 @@ mod tests {
         type Next = enums![((), Guess)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, secret: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        fn send(self, secret: Self::Input) -> Self::Transition
         {
             Transition::Next(Variant(((), Guess(secret))))
         }
@@ -160,7 +153,7 @@ mod tests {
         type Next = enums![(i64, Strategist)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, range: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        fn send(self, range: Self::Input) -> Self::Transition
         {
             if range.0 > range.1 {
                 Transition::Exit(Quit {})
@@ -180,7 +173,7 @@ mod tests {
         type Next = enums![(i64, Strategist)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, result: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        fn send(self, result: Self::Input) -> Self::Transition
         {
             let mav = Maverick {};
             let range = match result {

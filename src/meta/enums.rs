@@ -43,16 +43,6 @@ impl<A> Enum for (A,) {
     }
 }
 
-pub trait Either<H, T> {
-    type EitherTail: Enum<Head=T, Tail=!>;
-    type Output: Enum<Head=H, Tail=Self::EitherTail>;
-}
-
-impl Either<!, !> for ! {
-    type EitherTail = !;
-    type Output = !;
-}
-
 #[macro_export]
 macro_rules! enums {
     ($head:ty, $($tail:ty),+; $end:ty) => {
