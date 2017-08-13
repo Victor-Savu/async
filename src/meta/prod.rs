@@ -4,15 +4,15 @@ pub trait Prod: TypeList {
     fn split(self) -> (Self::Head, Self::Tail);
 }
 
-impl Prod for () {
-    fn split(self) -> (Self::Head, Self::Tail) {
-        ((), ())
-    }
-}
-
 impl Prod for ! {
     fn split(self) -> (Self::Head, Self::Tail) {
         unreachable!()
+    }
+}
+
+impl Prod for () {
+    fn split(self) -> (Self::Head, Self::Tail) {
+        ((), ())
     }
 }
 
@@ -23,6 +23,17 @@ impl<A, B> Prod for (A, B)
         self
     }
 }
+
+pub trait Pair<H, T> {
+    type ProdTail: Prod<Head=T, Tail=()>;
+    type Output: Prod<Head=H, Tail=Self::ProdTail>;
+}
+
+impl<H, T> Pair<H, T> for (H, T) {
+    type ProdTail = (T, ());
+    type Output = (H, Self::ProdTail);
+}
+
 
 #[cfg(test)]
 mod tests {

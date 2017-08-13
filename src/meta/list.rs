@@ -15,12 +15,17 @@ impl TypeList for () {
     type Tail = ();
 }
 
-impl<A, B> TypeList for Match<A, B> where B: TypeList {
+impl<A> TypeList for (A,) {
+    type Head = A;
+    type Tail = !;
+}
+
+impl<A, B> TypeList for (A, B) where B: TypeList {
     type Head = A;
     type Tail = B;
 }
 
-impl<A, B> TypeList for (A, B) where B: TypeList {
+impl<A, B> TypeList for Match<A, B> where B: TypeList {
     type Head = A;
     type Tail = B;
 }

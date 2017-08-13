@@ -1,4 +1,6 @@
-use meta::enums::Enum;
+use meta::enums::{Enum, Either};
+use meta::matches::Match;
+use meta::list::TypeList;
 
 
 pub trait ContinuationSet {
@@ -23,27 +25,54 @@ impl<Enumeration, Y, C> ContinuationSet for Enumeration
     type Suspend = Enumeration::Tail;
 }
 
-pub enum Transition<Next, Return>
+pub enum Transition<Next, Exit>
     where Next: ContinuationSet
 {
     Next(Next),
-    Return(Return),
+    Exit(Exit),
+}
+
+impl<Next, Exit> TypeList for Transition<Next, Exit>
+    where Next: ContinuationSet
+{
+    type Head = Next;
+    type Tail = (Exit,);
+}
+
+impl<Next, Exit> Enum for Transition<Next, Exit>
+    where Next: ContinuationSet
+{
+    fn split(self) -> Match<Self::Head, Self::Tail> {
+        match self {
+            Transition::Next(next) => Match::Variant(next),
+            Transition::Exit(exit) => Match::Next((exit,)),
+        }
+    }
+}
+
+impl<Next, Exit> Either<Next, Exit> for Transition<Next, Exit> where Next: ContinuationSet
+{
+    type EitherTail = (Exit,);
+    type Output = Self;
 }
 
 pub trait State: Sized {
     type Input;
     type Exit;
     type Next: ContinuationSet;
+    type Transition: Either<Self::Next, Self::Exit>;
 
-    fn send(self, i: Self::Input) -> Transition<Self::Next, Self::Exit>;
+    fn send(self, i: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output;
 }
 
 impl State for ! {
     type Input = !;
     type Exit = !;
     type Next = !;
+    type Transition = !;
 
-    fn send(self, _: Self::Input) -> Transition<Self::Next, Self::Exit> {
+    fn send(self, _: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+    {
         unreachable!()
     }
 }
@@ -56,6 +85,7 @@ mod tests {
     use super::{State, Transition};
     use meta::matches::Match::*;
     use std::fmt;
+    use meta::enums::Either;
 
     struct TooSmall;
 
@@ -88,10 +118,12 @@ mod tests {
         type Exit = Correct;
 
         type Next = enums![(TooSmall, Guess), (TooBig, Guess)];
+        type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, i: Self::Input) -> Transition<Self::Next, Self::Exit> {
+        fn send(self, i: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        {
             if self.0 == i {
-                Transition::Return(Correct {})
+                Transition::Exit(Correct {})
             } else if i < self.0 {
                 Transition::Next(Variant((TooSmall {}, self)))
             } else {
@@ -107,8 +139,10 @@ mod tests {
         type Exit = !;
 
         type Next = enums![((), Guess)];
+        type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, secret: Self::Input) -> Transition<Self::Next, Self::Exit> {
+        fn send(self, secret: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        {
             Transition::Next(Variant(((), Guess(secret))))
         }
     }
@@ -128,10 +162,12 @@ mod tests {
         type Exit = Quit;
 
         type Next = enums![(i64, Strategist)];
+        type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, range: Self::Input) -> Transition<Self::Next, Self::Exit> {
+        fn send(self, range: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        {
             if range.0 > range.1 {
-                Transition::Return(Quit {})
+                Transition::Exit(Quit {})
             } else {
                 let guess = (range.0 + range.1) / 2;
                 Transition::Next(Variant((guess, Strategist(range.0, guess, range.1))))
@@ -146,8 +182,10 @@ mod tests {
         type Exit = Quit;
 
         type Next = enums![(i64, Strategist)];
+        type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, result: Self::Input) -> Transition<Self::Next, Self::Exit> {
+        fn send(self, result: Self::Input) -> <Self::Transition as Either<Self::Next, Self::Exit>>::Output
+        {
             let mav = Maverick {};
             let range = match result {
                 Variant(TooSmall) => (self.1 + 1, self.2),
@@ -219,7 +257,7 @@ mod tests {
         };
 
         match game.send(16) {
-            Transition::Return(msg) => assert_eq!(msg.to_string(), "You guessed it!"),
+            Transition::Exit(msg) => assert_eq!(msg.to_string(), "You guessed it!"),
             _ => panic!("The answer was correct! The coroutine should return."),
         }
     }
@@ -238,7 +276,7 @@ mod tests {
 
         let (mut guess, mut player) = match player.send((lo, hi)) {
             Transition::Next(Variant(x)) => x,
-            Transition::Return(_) => panic!("The range is valid, why did you return?"),
+            Transition::Exit(_) => panic!("The range is valid, why did you return?"),
         };
 
 
@@ -246,12 +284,12 @@ mod tests {
             let (result, game_) = match game.send(guess) {
                 Transition::Next(Variant((r, g))) => (Variant(r), g),
                 Transition::Next(Next(Variant((r, g)))) => (Next(Variant(r)), g),
-                Transition::Return(r) => break Finish::GameWon(r),
+                Transition::Exit(r) => break Finish::GameWon(r),
             };
             game = game_;
             let (guess_, player_) = match player.send(result) {
                 Transition::Next(Variant(s)) => s,
-                Transition::Return(r) => break Finish::PlayerGaveUp(r),
+                Transition::Exit(r) => break Finish::PlayerGaveUp(r),
             };
             guess = guess_;
             player = player_;

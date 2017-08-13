@@ -13,10 +13,28 @@ impl Enum for ! {
     }
 }
 
-impl<A, B> Enum for Match<A, B> where B: Enum {
+impl<A, B> Enum for Match<A, B>
+    where B: Enum
+{
     fn split(self) -> Match<Self::Head, Self::Tail> {
         self
     }
+}
+
+impl<A> Enum for (A,) {
+    fn split(self) -> Match<Self::Head, Self::Tail> {
+        Match::Variant(self.0)
+    }
+}
+
+pub trait Either<H, T> {
+    type EitherTail: Enum<Head=T, Tail=!>;
+    type Output: Enum<Head=H, Tail=Self::EitherTail>;
+}
+
+impl Either<!, !> for ! {
+    type EitherTail = !;
+    type Output = !;
 }
 
 #[macro_export]
