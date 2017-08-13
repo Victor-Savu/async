@@ -1,6 +1,5 @@
 use meta::enums::Enum;
 use meta::sum::Sum;
-use meta::matches::Match;
 
 
 pub trait ContinuationSet {
@@ -23,27 +22,6 @@ impl<Enumeration, Y, C> ContinuationSet for Enumeration
     type Emit = Y;
     type Continue = C;
     type Suspend = Enumeration::Tail;
-}
-
-pub enum Transition<Next, Exit>
-    where Next: ContinuationSet
-{
-    Next(Next),
-    Exit(Exit),
-}
-
-impl<Next, Exit> Sum for Transition<Next, Exit>
-    where Next: ContinuationSet
-{
-    type Left = Next;
-    type Right = Exit;
-
-    fn to_canonical(self) -> Match<Self::Left, Self::Right> {
-        match self {
-            Transition::Next(next) => Match::Variant(next),
-            Transition::Exit(exit) => Match::Next(exit),
-        }
-    }
 }
 
 pub trait State: Sized {
@@ -72,9 +50,32 @@ mod tests {
 
     #![macro_use]
 
-    use super::{State, Transition};
+    use super::{State, ContinuationSet};
     use meta::matches::Match::*;
+    use meta::matches::Match;
+    use meta::sum::Sum;
     use std::fmt;
+
+    pub enum Transition<Next, Exit>
+        where Next: ContinuationSet
+        {
+            Next(Next),
+            Exit(Exit),
+        }
+
+    impl<Next, Exit> Sum for Transition<Next, Exit>
+        where Next: ContinuationSet
+        {
+            type Left = Next;
+            type Right = Exit;
+
+            fn to_canonical(self) -> Match<Self::Left, Self::Right> {
+                match self {
+                    Transition::Next(next) => Match::Variant(next),
+                    Transition::Exit(exit) => Match::Next(exit),
+                }
+            }
+        }
 
     struct TooSmall;
 
