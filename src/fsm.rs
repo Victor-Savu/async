@@ -24,7 +24,7 @@ impl<Enumeration, Y, C> ContinuationSet for Enumeration
     type Suspend = Enumeration::Tail;
 }
 
-pub trait State: Sized {
+pub trait State {
     type Input;
     type Exit;
     type Next: ContinuationSet;
