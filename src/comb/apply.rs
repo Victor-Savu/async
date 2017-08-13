@@ -26,8 +26,7 @@ impl<F, C> GenApply<F, C>
           F: Generator<Yield = C::Yield>,
           F::Return: FnOnce<(C::Return,)>
 {
-    fn new(functor: F, c: C) -> Self
-    {
+    fn new(functor: F, c: C) -> Self {
         GenApply(functor.all(c).map_return(ApplyFn(PhantomData)))
     }
 }
@@ -72,7 +71,7 @@ mod tests {
 
     #[test]
     fn apply() {
-        let four = (|x| x+1).done().apply(3.done());
+        let four = (|x| x + 1).done().apply(3.done());
         let res = each!(four);
         assert_eq!(res, 4);
     }

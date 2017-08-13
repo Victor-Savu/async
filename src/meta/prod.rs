@@ -24,8 +24,7 @@ impl Prod for () {
     }
 }
 
-impl<A> Prod for (A,)
-{
+impl<A> Prod for (A,) {
     type Head = A;
     type Tail = ();
 
@@ -46,8 +45,8 @@ impl<A, B> Prod for (A, B)
 }
 
 pub trait Pair<H, T> {
-    type ProdTail: Prod<Head=T, Tail=()>;
-    type Output: Prod<Head=H, Tail=Self::ProdTail>;
+    type ProdTail: Prod<Head = T, Tail = ()>;
+    type Output: Prod<Head = H, Tail = Self::ProdTail>;
 }
 
 impl<H, T> Pair<H, T> for (H, T) {

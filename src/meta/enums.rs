@@ -6,7 +6,7 @@ use meta::matches::Match;
 pub trait Enum {
     type Head;
     type Tail: Enum;
-    type Output: Sum<Left=Self::Head, Right=Self::Tail>;
+    type Output: Sum<Left = Self::Head, Right = Self::Tail>;
 
     fn split(self) -> Self::Output;
 }

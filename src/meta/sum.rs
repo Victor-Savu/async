@@ -16,8 +16,7 @@ impl Sum for ! {
     }
 }
 
-impl<A, B> Sum for Match<A, B>
-{
+impl<A, B> Sum for Match<A, B> {
     type Left = A;
     type Right = B;
 

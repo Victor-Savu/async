@@ -28,7 +28,7 @@ pub trait State: Sized {
     type Input;
     type Exit;
     type Next: ContinuationSet;
-    type Transition: Sum<Left=Self::Next, Right=Self::Exit>;
+    type Transition: Sum<Left = Self::Next, Right = Self::Exit>;
 
     fn send(self, i: Self::Input) -> Self::Transition;
 }
@@ -39,8 +39,7 @@ impl State for ! {
     type Next = !;
     type Transition = !;
 
-    fn send(self, _: Self::Input) -> Self::Transition
-    {
+    fn send(self, _: Self::Input) -> Self::Transition {
         unreachable!()
     }
 }
@@ -58,24 +57,24 @@ mod tests {
 
     pub enum Transition<Next, Exit>
         where Next: ContinuationSet
-        {
-            Next(Next),
-            Exit(Exit),
-        }
+    {
+        Next(Next),
+        Exit(Exit),
+    }
 
     impl<Next, Exit> Sum for Transition<Next, Exit>
         where Next: ContinuationSet
-        {
-            type Left = Next;
-            type Right = Exit;
+    {
+        type Left = Next;
+        type Right = Exit;
 
-            fn to_canonical(self) -> Match<Self::Left, Self::Right> {
-                match self {
-                    Transition::Next(next) => Match::Variant(next),
-                    Transition::Exit(exit) => Match::Next(exit),
-                }
+        fn to_canonical(self) -> Match<Self::Left, Self::Right> {
+            match self {
+                Transition::Next(next) => Match::Variant(next),
+                Transition::Exit(exit) => Match::Next(exit),
             }
         }
+    }
 
     struct TooSmall;
 
@@ -110,8 +109,7 @@ mod tests {
         type Next = enums![(TooSmall, Guess), (TooBig, Guess)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, i: Self::Input) -> Self::Transition
-        {
+        fn send(self, i: Self::Input) -> Self::Transition {
             if self.0 == i {
                 Transition::Exit(Correct {})
             } else if i < self.0 {
@@ -131,8 +129,7 @@ mod tests {
         type Next = enums![((), Guess)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, secret: Self::Input) -> Self::Transition
-        {
+        fn send(self, secret: Self::Input) -> Self::Transition {
             Transition::Next(Variant(((), Guess(secret))))
         }
     }
@@ -154,8 +151,7 @@ mod tests {
         type Next = enums![(i64, Strategist)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, range: Self::Input) -> Self::Transition
-        {
+        fn send(self, range: Self::Input) -> Self::Transition {
             if range.0 > range.1 {
                 Transition::Exit(Quit {})
             } else {
@@ -174,8 +170,7 @@ mod tests {
         type Next = enums![(i64, Strategist)];
         type Transition = Transition<Self::Next, Self::Exit>;
 
-        fn send(self, result: Self::Input) -> Self::Transition
-        {
+        fn send(self, result: Self::Input) -> Self::Transition {
             let mav = Maverick {};
             let range = match result {
                 Variant(TooSmall) => (self.1 + 1, self.2),

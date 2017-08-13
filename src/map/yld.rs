@@ -21,14 +21,11 @@ impl<C, F> Generator for GenMapYield<C, F>
 pub trait MapYield
     where Self: Generator
 {
-    fn map_yield<F>(self, f: F) -> GenMapYield<Self, F> where 
-          F: FnMut<(Self::Yield,)>
+    fn map_yield<F>(self, f: F) -> GenMapYield<Self, F>
+        where F: FnMut<(Self::Yield,)>
     {
         GenMapYield(self, f)
     }
 }
 
-impl<C> MapYield for C
-    where C: Generator
-{
-}
+impl<C> MapYield for C where C: Generator {}
