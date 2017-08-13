@@ -1,6 +1,5 @@
 use meta::enums::{Enum, Either};
 use meta::matches::Match;
-use meta::list::TypeList;
 
 
 pub trait ContinuationSet {
@@ -32,16 +31,11 @@ pub enum Transition<Next, Exit>
     Exit(Exit),
 }
 
-impl<Next, Exit> TypeList for Transition<Next, Exit>
+impl<Next, Exit> Enum for Transition<Next, Exit>
     where Next: ContinuationSet
 {
     type Head = Next;
     type Tail = (Exit,);
-}
-
-impl<Next, Exit> Enum for Transition<Next, Exit>
-    where Next: ContinuationSet
-{
     fn split(self) -> Match<Self::Head, Self::Tail> {
         match self {
             Transition::Next(next) => Match::Variant(next),

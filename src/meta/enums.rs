@@ -1,13 +1,18 @@
 #![macro_use]
 
 use meta::matches::Match;
-use meta::list::TypeList;
 
-pub trait Enum: TypeList {
+pub trait Enum {
+    type Head;
+    type Tail: Enum;
+
     fn split(self) -> Match<Self::Head, Self::Tail>;
 }
 
 impl Enum for ! {
+    type Head = !;
+    type Tail = !;
+
     fn split(self) -> Match<Self::Head, Self::Tail> {
         unreachable!()
     }
@@ -16,12 +21,18 @@ impl Enum for ! {
 impl<A, B> Enum for Match<A, B>
     where B: Enum
 {
+    type Head = A;
+    type Tail = B;
+
     fn split(self) -> Match<Self::Head, Self::Tail> {
         self
     }
 }
 
 impl<A> Enum for (A,) {
+    type Head = A;
+    type Tail = !;
+
     fn split(self) -> Match<Self::Head, Self::Tail> {
         Match::Variant(self.0)
     }
