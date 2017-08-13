@@ -10,6 +10,12 @@ impl Prod for () {
     }
 }
 
+impl Prod for ! {
+    fn split(self) -> (Self::Head, Self::Tail) {
+        unreachable!()
+    }
+}
+
 impl<A, B> Prod for (A, B)
     where B: Prod
 {
