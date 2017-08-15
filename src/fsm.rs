@@ -1,4 +1,3 @@
-use meta::enums::Match;
 use meta::sum::Sum;
 use meta::prod::Prod;
 
@@ -6,30 +5,24 @@ use meta::prod::Prod;
 pub trait ContinuationSet {
     type Emit;
     type Continue: State;
+    type Head: Prod<Left = Self::Emit, Right = Self::Continue>;
     type Suspend: ContinuationSet;
+    type Output: Sum<Left = Self::Head, Right = <Self::Suspend as ContinuationSet>::Output>;
 }
 
 impl ContinuationSet for ! {
     type Emit = !;
     type Continue = !;
+    type Head = !;
     type Suspend = !;
-}
-
-impl<C, S> ContinuationSet for Match<C, S>
-    where C: Prod,
-          C::Right: State,
-          S: ContinuationSet
-{
-    type Emit = C::Left;
-    type Continue = C::Right;
-    type Suspend = S;
+    type Output = !;
 }
 
 pub trait State {
     type Input;
     type Exit;
     type Next: ContinuationSet;
-    type Transition: Sum<Left = Self::Next, Right = Self::Exit>;
+    type Transition: Sum<Left = <Self::Next as ContinuationSet>::Output, Right = Self::Exit>;
 
     fn send(self, i: Self::Input) -> Self::Transition;
 }
@@ -52,18 +45,19 @@ mod tests {
 
     use super::{State, ContinuationSet};
     use meta::enums::Match::*;
+    use meta::enums::Match;
     use meta::sum::{Sum, Either};
+    use std::marker::PhantomData;
+    use meta::prod::Prod;
     use std::fmt;
 
     pub enum Transition<Next, Exit>
-        where Next: ContinuationSet
     {
         Next(Next),
         Exit(Exit),
     }
 
     impl<Next, Exit> Sum for Transition<Next, Exit>
-        where Next: ContinuationSet
     {
         type Left = Next;
         type Right = Exit;
@@ -74,6 +68,28 @@ mod tests {
                 Transition::Exit(exit) => Either::Right(exit),
             }
         }
+    }
+
+    pub struct MatchContinuation<C>(PhantomData<C>);
+
+    impl ContinuationSet for MatchContinuation<!> {
+        type Emit = !;
+        type Continue = !;
+        type Head = !;
+        type Suspend = !;
+        type Output = !;
+    }
+
+    impl<H, T> ContinuationSet for MatchContinuation<Match<H, T>>
+        where H: Prod,
+              H::Right: State,
+              MatchContinuation<T>: ContinuationSet
+    {
+        type Emit = H::Left;
+        type Continue = H::Right;
+        type Head = H;
+        type Suspend = MatchContinuation<T>;
+        type Output = Match<Self::Head, <Self::Suspend as ContinuationSet>::Output>;
     }
 
     struct TooSmall;
@@ -106,8 +122,8 @@ mod tests {
         type Input = i64;
         type Exit = Correct;
 
-        type Next = enums![(TooSmall, Guess), (TooBig, Guess)];
-        type Transition = Transition<Self::Next, Self::Exit>;
+        type Next = MatchContinuation<enums![(TooSmall, Guess), (TooBig, Guess)]>;
+        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
 
         fn send(self, i: Self::Input) -> Self::Transition {
             if self.0 == i {
@@ -126,8 +142,8 @@ mod tests {
         type Input = i64;
         type Exit = !;
 
-        type Next = enums![((), Guess)];
-        type Transition = Transition<Self::Next, Self::Exit>;
+        type Next = MatchContinuation<enums![((), Guess)]>;
+        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
 
         fn send(self, secret: Self::Input) -> Self::Transition {
             Transition::Next(Variant(((), Guess(secret))))
@@ -148,8 +164,8 @@ mod tests {
         type Input = (i64, i64);
         type Exit = Quit;
 
-        type Next = enums![(i64, Strategist)];
-        type Transition = Transition<Self::Next, Self::Exit>;
+        type Next = MatchContinuation<enums![(i64, Strategist)]>;
+        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
 
         fn send(self, range: Self::Input) -> Self::Transition {
             if range.0 > range.1 {
@@ -167,8 +183,8 @@ mod tests {
         type Input = enums![TooSmall, TooBig];
         type Exit = Quit;
 
-        type Next = enums![(i64, Strategist)];
-        type Transition = Transition<Self::Next, Self::Exit>;
+        type Next = MatchContinuation<enums![(i64, Strategist)]>;
+        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
 
         fn send(self, result: Self::Input) -> Self::Transition {
             let mav = Maverick {};

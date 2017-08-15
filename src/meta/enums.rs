@@ -1,6 +1,6 @@
 #![macro_use]
 
-use meta::sum::{Sum, Left, Either};
+use meta::sum::{Sum, Either};
 
 pub enum Match<A, B> {
     Variant(A),
@@ -18,44 +18,13 @@ impl<A, B> Sum for Match<A, B> {
         }
     }
 }
+
 pub trait Enum {
     type Head;
     type Tail: Enum;
     type Output: Sum<Left = Self::Head, Right = Self::Tail>;
 
     fn split(self) -> Self::Output;
-}
-
-impl Enum for ! {
-    type Head = !;
-    type Tail = !;
-    type Output = !;
-
-    fn split(self) -> Self::Output {
-        unreachable!()
-    }
-}
-
-impl<A, B> Enum for Match<A, B>
-    where B: Enum
-{
-    type Head = A;
-    type Tail = B;
-    type Output = Self;
-
-    fn split(self) -> Self::Output {
-        self
-    }
-}
-
-impl<A> Enum for (A,) {
-    type Head = A;
-    type Tail = !;
-    type Output = Left<A>;
-
-    fn split(self) -> Self::Output {
-        Either::Left(self.0)
-    }
 }
 
 #[macro_export]
