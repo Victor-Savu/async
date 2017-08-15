@@ -1,5 +1,6 @@
-use meta::enums::Enum;
+use meta::enums::Match;
 use meta::sum::Sum;
+use meta::prod::Prod;
 
 
 pub trait ContinuationSet {
@@ -14,14 +15,14 @@ impl ContinuationSet for ! {
     type Suspend = !;
 }
 
-impl<Enumeration, Y, C> ContinuationSet for Enumeration
-    where C: State,
-          Enumeration: Enum<Head = (Y, C)>,
-          Enumeration::Tail: ContinuationSet
+impl<C, S> ContinuationSet for Match<C, S>
+    where C: Prod,
+          C::Right: State,
+          S: ContinuationSet
 {
-    type Emit = Y;
-    type Continue = C;
-    type Suspend = Enumeration::Tail;
+    type Emit = C::Left;
+    type Continue = C::Right;
+    type Suspend = S;
 }
 
 pub trait State {

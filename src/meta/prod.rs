@@ -14,6 +14,15 @@ impl<A, B> Prod for (A, B) {
     }
 }
 
+impl Prod for ! {
+    type Left = !;
+    type Right = !;
+
+    fn to_canonical(self) -> (Self::Left, Self::Right) {
+        unreachable!()
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
