@@ -2,14 +2,30 @@ use meta::sum::Sum;
 use meta::prod::Prod;
 
 
+/// Computes the types of possible continuations from the current state of a fsm
+///
+/// A continuation is a pair-like (product) type of an emitted value and a new state. While the
+/// emitted value can be anything, the new state must implement the State trait. A continuation
+/// comes about when a state transitions into another as a result of a call to `State::send`.
+///
+/// The ContinuationSet computes a list of these continuation types as an enumeration.
 pub trait ContinuationSet {
+    /// The type to be emitted if the current continuation transition is activated
     type Emit;
+    /// The type of the new state the fsm transitions into if the current continuation transition is
+    /// activated
     type Continue: State;
+    /// The type of the continuation resulting from the activation of the current continuation
+    /// transition
     type Head: Prod<Left = Self::Emit, Right = Self::Continue>;
+    /// The type of ContinuationSet to be used for computing the continuations resulting from the
+    /// activation of the subsequent continuation transitions
     type Suspend: ContinuationSet;
+    /// The discriminated union type used for holding one of the continuations
     type Output: Sum<Left = Self::Head, Right = <Self::Suspend as ContinuationSet>::Output>;
 }
 
+/// The never type can be used to show that there are no ensuing continuations
 impl ContinuationSet for ! {
     type Emit = !;
     type Continue = !;
@@ -18,19 +34,30 @@ impl ContinuationSet for ! {
     type Output = !;
 }
 
+/// Models a fsm state
+///
+/// A state in a fsm has the sole characteristic that it can transition either into a value and a
+/// child state or into a final exit value. The transition is triggered by the receival of an input
+/// value.
 pub trait State {
+    /// The type of the input value which triggers the transition
     type Input;
+    /// Tye type of the exit value that this state may transition into
     type Exit;
-    type Next: ContinuationSet;
-    type Transition: Sum<Left = <Self::Next as ContinuationSet>::Output, Right = Self::Exit>;
+    /// This type models two concepts:
+    ///  - The ContinuationSet of this state
+    ///  - The result of a transition, which is a Sum type between the output of the
+    ///  ContinuationSet and the Exit type
+    type Transition: ContinuationSet + Sum<Left = <Self::Transition as ContinuationSet>::Output, Right = Self::Exit>;
 
+    /// Implements the state transition
     fn send(self, i: Self::Input) -> Self::Transition;
 }
 
+/// The never type trivially represents a state which cannot be reached
 impl State for ! {
     type Input = !;
     type Exit = !;
-    type Next = !;
     type Transition = !;
 
     fn send(self, _: Self::Input) -> Self::Transition {
@@ -92,6 +119,16 @@ mod tests {
         type Output = Match<Self::Head, <Self::Suspend as ContinuationSet>::Output>;
     }
 
+    impl<N, E> ContinuationSet for Transition<N, E>
+        where MatchContinuation<N>: ContinuationSet
+    {
+        type Emit = <MatchContinuation<N> as ContinuationSet>::Emit;
+        type Continue = <MatchContinuation<N> as ContinuationSet>::Continue;
+        type Head = <MatchContinuation<N> as ContinuationSet>::Head;
+        type Suspend = <MatchContinuation<N> as ContinuationSet>::Suspend;
+        type Output = <MatchContinuation<N> as ContinuationSet>::Output;
+    }
+
     struct TooSmall;
 
     impl fmt::Display for TooSmall {
@@ -122,8 +159,7 @@ mod tests {
         type Input = i64;
         type Exit = Correct;
 
-        type Next = MatchContinuation<enums![(TooSmall, Guess), (TooBig, Guess)]>;
-        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
+        type Transition = Transition<enums![(TooSmall, Guess), (TooBig, Guess)], Self::Exit>;
 
         fn send(self, i: Self::Input) -> Self::Transition {
             if self.0 == i {
@@ -142,8 +178,7 @@ mod tests {
         type Input = i64;
         type Exit = !;
 
-        type Next = MatchContinuation<enums![((), Guess)]>;
-        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
+        type Transition = Transition<enums![((), Guess)], Self::Exit>;
 
         fn send(self, secret: Self::Input) -> Self::Transition {
             Transition::Next(Variant(((), Guess(secret))))
@@ -164,8 +199,7 @@ mod tests {
         type Input = (i64, i64);
         type Exit = Quit;
 
-        type Next = MatchContinuation<enums![(i64, Strategist)]>;
-        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
+        type Transition = Transition<enums![(i64, Strategist)], Self::Exit>;
 
         fn send(self, range: Self::Input) -> Self::Transition {
             if range.0 > range.1 {
@@ -183,8 +217,7 @@ mod tests {
         type Input = enums![TooSmall, TooBig];
         type Exit = Quit;
 
-        type Next = MatchContinuation<enums![(i64, Strategist)]>;
-        type Transition = Transition<<Self::Next as ContinuationSet>::Output, Self::Exit>;
+        type Transition = Transition<enums![(i64, Strategist)], Self::Exit>;
 
         fn send(self, result: Self::Input) -> Self::Transition {
             let mav = Maverick {};
