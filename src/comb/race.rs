@@ -1,5 +1,7 @@
 use gen::{Generator, GenResult};
 use either::Either;
+use meta::sum::{self, Sum};
+use meta::prod::Prod;
 
 
 pub struct GenRace<F, L>(Either<(F, L), (F, L)>)
@@ -13,19 +15,26 @@ impl<F, L> Generator for GenRace<F, L>
 {
     type Yield = F::Yield;
     type Return = Either<(F::Return, L), (F, L::Return)>;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0 {
             Either::Former((f, l)) => {
-                match f.next() {
-                    GenResult::Yield(y, f) => GenResult::Yield(y, GenRace(Either::Latter((f, l)))),
-                    GenResult::Return(f) => GenResult::Return(Either::Former((f, l))),
+                match f.next().to_canonical() {
+                    sum::Either::Left(s) => {
+                        let (y, f) = s.to_canonical();
+                        GenResult::Yield(y, GenRace(Either::Latter((f, l))))
+                    }
+                    sum::Either::Right(f) => GenResult::Return(Either::Former((f, l))),
                 }
             }
             Either::Latter((f, l)) => {
-                match l.next() {
-                    GenResult::Yield(y, l) => GenResult::Yield(y, GenRace(Either::Former((f, l)))),
-                    GenResult::Return(l) => GenResult::Return(Either::Latter((f, l))),
+                match l.next().to_canonical() {
+                    sum::Either::Left(s) => {
+                        let (y, l) = s.to_canonical();
+                        GenResult::Yield(y, GenRace(Either::Former((f, l))))
+                    }
+                    sum::Either::Right(l) => GenResult::Return(Either::Latter((f, l))),
                 }
             }
         }

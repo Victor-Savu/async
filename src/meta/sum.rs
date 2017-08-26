@@ -22,7 +22,7 @@ pub enum Either<L, R> {
 impl<L, R> Sum for Either<L, R> {
     type Left = L;
     type Right = R;
-    
+
     fn to_canonical(self) -> Either<Self::Left, Self::Right> {
         self
     }

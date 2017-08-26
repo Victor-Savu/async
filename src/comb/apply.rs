@@ -38,6 +38,7 @@ impl<C, F> Generator for GenApply<F, C>
 {
     type Yield = C::Yield;
     type Return = <F::Return as FnOnce<(C::Return,)>>::Output;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0.next() {

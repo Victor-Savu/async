@@ -5,6 +5,7 @@ pub struct GenDone<U>(U);
 impl<U> Generator for GenDone<U> {
     type Yield = !;
     type Return = U;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         GenResult::Return(self.0)

@@ -74,6 +74,7 @@ impl<F, L> Generator for GenAll<F, L>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0.next() {

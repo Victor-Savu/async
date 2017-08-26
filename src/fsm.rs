@@ -78,14 +78,12 @@ mod tests {
     use meta::prod::Prod;
     use std::fmt;
 
-    pub enum Transition<Next, Exit>
-    {
+    pub enum Transition<Next, Exit> {
         Next(Next),
         Exit(Exit),
     }
 
-    impl<Next, Exit> Sum for Transition<Next, Exit>
-    {
+    impl<Next, Exit> Sum for Transition<Next, Exit> {
         type Left = Next;
         type Right = Exit;
 
