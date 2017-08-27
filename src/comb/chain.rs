@@ -15,6 +15,7 @@ impl<F, L> Generator for GenChain<F, L>
 {
     type Yield = F::Yield;
     type Return = <L::Output as Generator>::Return;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0.next() {

@@ -7,6 +7,7 @@ impl<Iter> Generator for GenWrap<Iter>
 {
     type Yield = Iter::Item;
     type Return = Iter;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         let mut i = self.0;

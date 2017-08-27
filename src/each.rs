@@ -1,5 +1,3 @@
-#![macro_use]
-
 #[macro_export]
 macro_rules! _each_impl {
 
@@ -13,14 +11,15 @@ macro_rules! _each_impl {
     let mut iter_ = $iter;
     'outer: loop {
         let $else_ = loop {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
+            match $crate::meta::sum::Sum::to_canonical($crate::gen::Generator::next(iter_)) {
+                $crate::meta::sum::Either::Left(s) => {
+                    let ($elem, tail) = $crate::meta::prod::Prod::to_canonical(s);
                     #[allow(unused_assignments)] {
                         iter_ = tail
                     }
                     $loop_body
                 },
-                $crate::gen::GenResult::Return($then_) => {
+                $crate::meta::sum::Either::Right($then_) => {
                     break 'outer $then_body;
                 }
             }
@@ -38,8 +37,9 @@ macro_rules! _each_impl {
     let mut iter_ = $iter;
     loop {
         #[allow(unreachable_patterns)] {
-            match $crate::gen::Generator::next(iter_) {
-                $crate::gen::GenResult::Yield($elem, tail) => {
+            match $crate::meta::sum::Sum::to_canonical($crate::gen::Generator::next(iter_)) {
+                $crate::meta::sum::Either::Left(s) => {
+                    let ($elem, tail) = $crate::meta::prod::Prod::to_canonical(s);
                     #[allow(unused_assignments)] {
                         iter_ = tail
                     }
@@ -47,7 +47,7 @@ macro_rules! _each_impl {
                         $loop_body
                     }
                 },
-                $crate::gen::GenResult::Return($then_) => {
+                $crate::meta::sum::Either::Right($then_) => {
                     #[warn(unreachable_patterns)] {
                         #[allow(unreachable_code)] {
                             break {
@@ -574,6 +574,13 @@ mod tests {
         assert_eq!(num, []);
         assert_eq!(msg, "Finished: 3");
         */
+
+
+
+
+
+
+
     }
 
     #[test]
@@ -625,6 +632,13 @@ mod tests {
         assert_eq!(num, []);
         assert_eq!(msg, "Finished: 3");
         */
+
+
+
+
+
+
+
     }
 
     #[test]
@@ -676,6 +690,13 @@ mod tests {
         assert_eq!(num, []);
         assert_eq!(msg, "Finished: 3");
         */
+
+
+
+
+
+
+
     }
 
     #[test]
@@ -727,6 +748,13 @@ mod tests {
         assert_eq!(num, []);
         assert_eq!(msg, "Finished: 3");
         */
+
+
+
+
+
+
+
     }
 
     #[test]
@@ -777,6 +805,13 @@ mod tests {
         assert_eq!(num, []);
         assert_eq!(msg, "Finished: 3");
         */
+
+
+
+
+
+
+
     }
 
     #[test]

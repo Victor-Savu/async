@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use gen::{Generator, GenResult};
-use either::Either;
+use either::GenEither;
 use comb::race::{GenRace, Race};
 use comb::chain::{GenChain, Chain};
 use map::ret::{GenMapReturn, MapReturn};
@@ -48,18 +48,18 @@ impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L> {
     }
 }
 
-impl<F, L> FnOnce<(Either<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
+impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
     where F: Generator,
           L: Generator<Yield = F::Yield>
 {
-    type Output = Either<GenMapReturn<L, Prepend<F::Return>>, GenMapReturn<F, Append<L::Return>>>;
+    type Output = GenEither<GenMapReturn<L, Prepend<F::Return>>, GenMapReturn<F, Append<L::Return>>>;
 
     extern "rust-call" fn call_once(self,
-                                    (results,): (Either<(F::Return, L), (F, L::Return)>,))
+                                    (results,): (GenEither<(F::Return, L), (F, L::Return)>,))
                                     -> Self::Output {
         match results {
-            Either::Former((f, l)) => Either::Former(l.map_return(Prepend::new(f))),
-            Either::Latter((f, l)) => Either::Latter(f.map_return(Append::new(l))),
+            GenEither::Former((f, l)) => GenEither::Former(l.map_return(Prepend::new(f))),
+            GenEither::Latter((f, l)) => GenEither::Latter(f.map_return(Append::new(l))),
         }
     }
 }
@@ -74,6 +74,7 @@ impl<F, L> Generator for GenAll<F, L>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0.next() {
@@ -96,6 +97,7 @@ impl<F> All for F where F: Generator {}
 
 #[cfg(test)]
 mod tests {
+
     use iter::wrap::Wrap;
     use comb::all::All;
     use map::ret::MapReturn;

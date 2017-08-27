@@ -1,4 +1,6 @@
 use gen::{Generator, GenResult};
+use meta::sum::{Sum, Either};
+use meta::prod::Prod;
 
 pub struct GenMapYield<C, F>(C, F);
 
@@ -8,12 +10,16 @@ impl<C, F> Generator for GenMapYield<C, F>
 {
     type Yield = F::Output;
     type Return = C::Return;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         let mut f = self.1;
-        match self.0.next() {
-            GenResult::Yield(y, c) => GenResult::Yield(f(y), c.map_yield(f)),
-            GenResult::Return(res) => GenResult::Return(res),
+        match self.0.next().to_canonical() {
+            Either::Left(s) => {
+                let (y, c) = s.to_canonical();
+                GenResult::Yield(f(y), c.map_yield(f))
+            }
+            Either::Right(res) => GenResult::Return(res),
         }
     }
 }
@@ -21,14 +27,11 @@ impl<C, F> Generator for GenMapYield<C, F>
 pub trait MapYield
     where Self: Generator
 {
-    fn map_yield<F>(self, f: F) -> GenMapYield<Self, F> where 
-          F: FnMut<(Self::Yield,)>
+    fn map_yield<F>(self, f: F) -> GenMapYield<Self, F>
+        where F: FnMut<(Self::Yield,)>
     {
         GenMapYield(self, f)
     }
 }
 
-impl<C> MapYield for C
-    where C: Generator
-{
-}
+impl<C> MapYield for C where C: Generator {}

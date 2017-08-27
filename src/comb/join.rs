@@ -1,4 +1,6 @@
 use gen::{Generator, GenResult};
+use meta::sum::{Either, Sum};
+use meta::prod::Prod;
 
 pub enum GenJoin<C>
     where C: Generator
@@ -9,24 +11,30 @@ pub enum GenJoin<C>
 
 impl<C> Generator for GenJoin<C>
     where C: Generator,
-          C::Return: Generator,
-          C::Yield: From<<C::Return as Generator>::Yield>
+          C::Return: Generator<Yield = C::Yield>
 {
     type Yield = C::Yield;
     type Return = <C::Return as Generator>::Return;
+    type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self {
             GenJoin::Outer(c) => {
-                match c.next() {
-                    GenResult::Yield(y, outer) => GenResult::Yield(y, outer.join()),
-                    GenResult::Return(inner) => GenJoin::Inner(inner).next(),
+                match c.next().to_canonical() {
+                    Either::Left(s) => {
+                        let (y, outer) = s.to_canonical();
+                        GenResult::Yield(y, outer.join())
+                    }
+                    Either::Right(inner) => GenJoin::Inner(inner).next(),
                 }
             }
             GenJoin::Inner(c) => {
-                match c.next() {
-                    GenResult::Yield(y, inner) => GenResult::Yield(y.into(), GenJoin::Inner(inner)),
-                    GenResult::Return(result) => GenResult::Return(result),
+                match c.next().to_canonical() {
+                    Either::Left(s) => {
+                        let (y, inner) = s.to_canonical();
+                        GenResult::Yield(y, GenJoin::Inner(inner))
+                    }
+                    Either::Right(result) => GenResult::Return(result),
                 }
             }
         }
