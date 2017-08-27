@@ -1,6 +1,6 @@
 use gen::Generator;
-use meta::sum::{Either, Sum};
-use meta::prod::Prod;
+use cat::sum::{Either, Sum};
+use cat::prod::Prod;
 
 pub struct GenIterate<C>(Option<C>);
 

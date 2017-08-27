@@ -1,6 +1,6 @@
 use gen::{Generator, GenResult};
-use meta::sum::{Either, Sum};
-use meta::prod::Prod;
+use cat::sum::{Either, Sum};
+use cat::prod::Prod;
 
 pub enum GenJoin<C>
     where C: Generator

@@ -4,7 +4,7 @@
 #![feature(unboxed_closures)]
 
 #[macro_use]
-pub mod meta;
+pub mod cat;
 #[macro_use]
 pub mod each;
 

@@ -1,5 +1,5 @@
-use meta::sum::Sum;
-use meta::prod::Prod;
+use cat::sum::Sum;
+use cat::prod::Prod;
 
 
 /// Computes the types of possible continuations from the current state of a fsm
@@ -68,11 +68,11 @@ impl State for ! {
 #[cfg(test)]
 mod tests {
     use super::{State, ContinuationSet};
-    use meta::enums::Match::*;
-    use meta::enums::Match;
-    use meta::sum::{Sum, Either};
+    use cat::enums::Match::*;
+    use cat::enums::Match;
+    use cat::sum::{Sum, Either};
     use std::marker::PhantomData;
-    use meta::prod::Prod;
+    use cat::prod::Prod;
     use std::fmt;
 
     pub enum Transition<Next, Exit> {

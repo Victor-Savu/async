@@ -1,6 +1,6 @@
 use gen::{Generator, GenResult};
-use meta::sum::{Sum, Either};
-use meta::prod::Prod;
+use cat::sum::{Sum, Either};
+use cat::prod::Prod;
 
 pub struct GenMapReturn<C, F>(C, F);
 

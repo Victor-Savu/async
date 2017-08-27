@@ -1,4 +1,4 @@
-use meta::sum::{Sum, Either};
+use cat::sum::{Sum, Either};
 
 pub enum Match<A, B> {
     Variant(A),
@@ -28,11 +28,11 @@ pub trait Enum {
 #[macro_export]
 macro_rules! enums {
     ($head:ty, $($tail:ty),+; $end:ty) => {
-        $crate::meta::enums::Match<$head, enums![ $($tail),*; $end ]>
+        $crate::cat::enums::Match<$head, enums![ $($tail),*; $end ]>
     };
 
     ($head:ty; $end:ty) => {
-        $crate::meta::enums::Match<$head, $end>
+        $crate::cat::enums::Match<$head, $end>
     };
 
     ($($tail:ty),*) => {
@@ -45,7 +45,7 @@ mod tests {
 
     #[test]
     fn enum_once() {
-        use meta::enums::Match::*;
+        use cat::enums::Match::*;
         type Vars = enums![i32, &'static str, f64];
         let integer: Vars = Variant(42);
         let string = Next(Variant("Happy!"));

@@ -1,7 +1,7 @@
 use std::ops::RangeFrom;
 use fsm::{State, ContinuationSet};
-use meta::sum::{Either, Sum};
-use meta::prod::Prod;
+use cat::sum::{Either, Sum};
+use cat::prod::Prod;
 
 pub trait GenSuspend {
     type Gen: Generator;
