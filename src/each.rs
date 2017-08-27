@@ -1,5 +1,3 @@
-#![macro_use]
-
 #[macro_export]
 macro_rules! _each_impl {
 

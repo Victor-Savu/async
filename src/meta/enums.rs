@@ -1,5 +1,3 @@
-#![macro_use]
-
 use meta::sum::{Sum, Either};
 
 pub enum Match<A, B> {

@@ -67,9 +67,6 @@ impl State for ! {
 
 #[cfg(test)]
 mod tests {
-
-    #![macro_use]
-
     use super::{State, ContinuationSet};
     use meta::enums::Match::*;
     use meta::enums::Match;
