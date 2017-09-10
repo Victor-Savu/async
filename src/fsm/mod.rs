@@ -9,7 +9,7 @@ pub mod match_transition;
 /// emitted value can be anything, the new state must implement the State trait. A continuation
 /// comes about when a state transitions into another as a result of a call to `State::send`.
 ///
-/// The ContinuationSet computes a list of these continuation types as an enumeration.
+/// The `ContinuationSet` computes a list of these continuation types as an enumeration.
 pub trait ContinuationSet {
     /// The type to be emitted if the current continuation transition is activated
     type Emit;
