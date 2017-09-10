@@ -1,32 +1,30 @@
-use cat::sum::Sum;
+use fsm::{State, ContinuationSet};
+use cat::enums::Match;
+use cat::sum::{Sum, Either};
+use std::marker::PhantomData;
 use cat::prod::Prod;
 
 
-/// Computes the types of possible continuations from the current state of a fsm
-///
-/// A continuation is a pair-like (product) type of an emitted value and a new state. While the
-/// emitted value can be anything, the new state must implement the State trait. A continuation
-/// comes about when a state transitions into another as a result of a call to `State::send`.
-///
-/// The ContinuationSet computes a list of these continuation types as an enumeration.
-pub trait ContinuationSet {
-    /// The type to be emitted if the current continuation transition is activated
-    type Emit;
-    /// The type of the new state the fsm transitions into if the current continuation transition is
-    /// activated
-    type Continue: State;
-    /// The type of the continuation resulting from the activation of the current continuation
-    /// transition
-    type Head: Prod<Left = Self::Emit, Right = Self::Continue>;
-    /// The type of ContinuationSet to be used for computing the continuations resulting from the
-    /// activation of the subsequent continuation transitions
-    type Suspend: ContinuationSet;
-    /// The discriminated union type used for holding one of the continuations
-    type Output: Sum<Left = Self::Head, Right = <Self::Suspend as ContinuationSet>::Output>;
+pub enum Transition<Next, Exit> {
+    Next(Next),
+    Exit(Exit),
 }
 
-/// The never type can be used to show that there are no ensuing continuations
-impl ContinuationSet for ! {
+impl<Next, Exit> Sum for Transition<Next, Exit> {
+    type Left = Next;
+    type Right = Exit;
+
+    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
+        match self {
+            Transition::Next(next) => Either::Left(next),
+            Transition::Exit(exit) => Either::Right(exit),
+        }
+    }
+}
+
+pub struct MatchContinuation<C>(PhantomData<C>);
+
+impl ContinuationSet for MatchContinuation<!> {
     type Emit = !;
     type Continue = !;
     type Head = !;
@@ -34,95 +32,37 @@ impl ContinuationSet for ! {
     type Output = !;
 }
 
-/// Models a fsm state
-///
-/// A state in a fsm has the sole characteristic that it can transition either into a value and a
-/// child state or into a final exit value. The transition is triggered by the receival of an input
-/// value.
-pub trait State {
-    /// The type of the input value which triggers the transition
-    type Input;
-    /// Tye type of the exit value that this state may transition into
-    type Exit;
-    /// This type models two concepts:
-    ///  - The ContinuationSet of this state
-    ///  - The result of a transition, which is a Sum type between the output of the
-    ///  ContinuationSet and the Exit type
-    type Transition: ContinuationSet + Sum<Left = <Self::Transition as ContinuationSet>::Output, Right = Self::Exit>;
-
-    /// Implements the state transition
-    fn send(self, i: Self::Input) -> Self::Transition;
+impl<H, T> ContinuationSet for MatchContinuation<Match<H, T>>
+where H: Prod,
+      H::Right: State,
+      MatchContinuation<T>: ContinuationSet
+{
+    type Emit = H::Left;
+    type Continue = H::Right;
+    type Head = H;
+    type Suspend = MatchContinuation<T>;
+    type Output = Match<Self::Head, <Self::Suspend as ContinuationSet>::Output>;
 }
 
-/// The never type trivially represents a state which cannot be reached
-impl State for ! {
-    type Input = !;
-    type Exit = !;
-    type Transition = !;
-
-    fn send(self, _: Self::Input) -> Self::Transition {
-        unreachable!()
-    }
+impl<N, E> ContinuationSet for Transition<N, E>
+where MatchContinuation<N>: ContinuationSet
+{
+    type Emit = <MatchContinuation<N> as ContinuationSet>::Emit;
+    type Continue = <MatchContinuation<N> as ContinuationSet>::Continue;
+    type Head = <MatchContinuation<N> as ContinuationSet>::Head;
+    type Suspend = <MatchContinuation<N> as ContinuationSet>::Suspend;
+    type Output = <MatchContinuation<N> as ContinuationSet>::Output;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{State, ContinuationSet};
+    use fsm::State;
     use cat::enums::Match::*;
-    use cat::enums::Match;
-    use cat::sum::{Sum, Either};
-    use std::marker::PhantomData;
-    use cat::prod::Prod;
+//    use cat::enums::Match;
+//    use cat::sum::{Sum, Either};
+//    use cat::prod::Prod;
+    use super::Transition;
     use std::fmt;
-
-    pub enum Transition<Next, Exit> {
-        Next(Next),
-        Exit(Exit),
-    }
-
-    impl<Next, Exit> Sum for Transition<Next, Exit> {
-        type Left = Next;
-        type Right = Exit;
-
-        fn to_canonical(self) -> Either<Self::Left, Self::Right> {
-            match self {
-                Transition::Next(next) => Either::Left(next),
-                Transition::Exit(exit) => Either::Right(exit),
-            }
-        }
-    }
-
-    pub struct MatchContinuation<C>(PhantomData<C>);
-
-    impl ContinuationSet for MatchContinuation<!> {
-        type Emit = !;
-        type Continue = !;
-        type Head = !;
-        type Suspend = !;
-        type Output = !;
-    }
-
-    impl<H, T> ContinuationSet for MatchContinuation<Match<H, T>>
-        where H: Prod,
-              H::Right: State,
-              MatchContinuation<T>: ContinuationSet
-    {
-        type Emit = H::Left;
-        type Continue = H::Right;
-        type Head = H;
-        type Suspend = MatchContinuation<T>;
-        type Output = Match<Self::Head, <Self::Suspend as ContinuationSet>::Output>;
-    }
-
-    impl<N, E> ContinuationSet for Transition<N, E>
-        where MatchContinuation<N>: ContinuationSet
-    {
-        type Emit = <MatchContinuation<N> as ContinuationSet>::Emit;
-        type Continue = <MatchContinuation<N> as ContinuationSet>::Continue;
-        type Head = <MatchContinuation<N> as ContinuationSet>::Head;
-        type Suspend = <MatchContinuation<N> as ContinuationSet>::Suspend;
-        type Output = <MatchContinuation<N> as ContinuationSet>::Output;
-    }
 
     struct TooSmall;
 
