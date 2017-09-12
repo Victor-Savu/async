@@ -35,6 +35,17 @@ impl ContinuationSet for ! {
     type Output = !;
 }
 
+pub trait StateTransition {
+    type Continuation: ContinuationSet;
+    /// Tye type of the exit value that this state may transition into
+    type Exit;
+}
+
+impl StateTransition for ! {
+    type Continuation = !;
+    type Exit = !;
+}
+
 /// Models a fsm state
 ///
 /// A state in a fsm has the sole characteristic that it can transition either into a value and a
@@ -43,13 +54,11 @@ impl ContinuationSet for ! {
 pub trait State {
     /// The type of the input value which triggers the transition
     type Input;
-    /// Tye type of the exit value that this state may transition into
-    type Exit;
     /// This type models two concepts:
     ///  - The ContinuationSet of this state
     ///  - The result of a transition, which is a Sum type between the output of the
     ///  ContinuationSet and the Exit type
-    type Transition: ContinuationSet + Sum<Left = <Self::Transition as ContinuationSet>::Output, Right = Self::Exit>;
+    type Transition: StateTransition + Sum<Left = <<Self::Transition as StateTransition>::Continuation as ContinuationSet>::Output, Right = <Self::Transition as StateTransition>::Exit>;
 
     /// Implements the state transition
     fn send(self, i: Self::Input) -> Self::Transition;
@@ -58,7 +67,6 @@ pub trait State {
 /// The never type trivially represents a state which cannot be reached
 impl State for ! {
     type Input = !;
-    type Exit = !;
     type Transition = !;
 
     fn send(self, _: Self::Input) -> Self::Transition {

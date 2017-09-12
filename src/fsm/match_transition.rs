@@ -1,26 +1,80 @@
-use fsm::{State, ContinuationSet};
+//! The standard type used for defining a `fsm::State::Transition`
+//!
+//! This is the go-to type for when you are implementing `State` for your type.
+//!
+//! # Examples
+//!
+//! ```
+//! #![feature(never_type)]
+//! #[macro_use] extern crate o3;
+//!
+//! use o3::fsm::State;
+//! use o3::fsm::match_transition::Transition;
+//! use o3::cat::enums::Match::*;
+//!
+//! struct Idle;
+//! struct Payment;
+//! struct Pouring;
+//!
+//! enum Drink {
+//!     Coffee,
+//!     HotChocolate,
+//!     HotWater,
+//! }
+//!
+//! impl State for Idle {
+//!     type Input = Drink;
+//!     type Transition = Transition<enums![(&'static str, Payment), (&'static str, Pouring)], !>;
+//!
+//!     fn send(self, product: Self::Input) -> Self::Transition {
+//!         match product {
+//!             Drink::Coffee => Transition::Continue(Variant(("Ten cents and a piece of your soul.", Payment{}))),
+//!             Drink::HotChocolate => Transition::Continue(Variant(("9c + $2 for the cream", Payment{}))),
+//!             Drink::HotWater => Transition::Continue(Next(Variant(("Tea if free, as you should be!", Pouring{})))),
+//!         }
+//!     }
+//! }
+//!
+//! struct DonePouring;
+//!
+//! impl State for Pouring {
+//!     type Input = DonePouring;
+//!     type Transition = Transition<enums![(&'static str, Idle)], !>;
+//!
+//!     fn send(self, _: Self::Input) -> Self::Transition {
+//!         Transition::Continue(Variant(("Enjoy!", Idle{})))
+//!     }
+//! }
+//!
+//! enum Decision {
+//!     Pay,
+//!     Cancel,
+//!     SmashTheMachine,
+//! }
+//!
+//! struct ContortedMetal;
+//!
+//! impl State for Payment {
+//!     type Input = Decision;
+//!     type Transition = Transition<enums![(&'static str, Pouring), (&'static str, Idle)], ContortedMetal>;
+//!
+//!     fn send(self, decision: Self::Input) -> Self::Transition {
+//!         match decision {
+//!             Decision::Pay => Transition::Continue(Variant(("Your kindness shall be rewarded!", Pouring{}))),
+//!             Decision::Cancel => Transition::Continue(Next(Variant(("Suit yorself!", Idle{})))),
+//!             Decision::SmashTheMachine => Transition::Exit(ContortedMetal{}),
+//!         }
+//!     }
+//! }
+//!
+//! fn main() {}
+//! ```
+use fsm::{State, ContinuationSet, StateTransition};
 use cat::enums::Match;
 use cat::sum::{Sum, Either};
 use std::marker::PhantomData;
 use cat::prod::Prod;
 
-
-pub enum Transition<Next, Exit> {
-    Next(Next),
-    Exit(Exit),
-}
-
-impl<Next, Exit> Sum for Transition<Next, Exit> {
-    type Left = Next;
-    type Right = Exit;
-
-    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
-        match self {
-            Transition::Next(next) => Either::Left(next),
-            Transition::Exit(exit) => Either::Right(exit),
-        }
-    }
-}
 
 pub struct MatchContinuation<C>(PhantomData<C>);
 
@@ -33,9 +87,9 @@ impl ContinuationSet for MatchContinuation<!> {
 }
 
 impl<H, T> ContinuationSet for MatchContinuation<Match<H, T>>
-where H: Prod,
-      H::Right: State,
-      MatchContinuation<T>: ContinuationSet
+    where H: Prod,
+          H::Right: State,
+          MatchContinuation<T>: ContinuationSet
 {
     type Emit = H::Left;
     type Continue = H::Right;
@@ -44,23 +98,34 @@ where H: Prod,
     type Output = Match<Self::Head, <Self::Suspend as ContinuationSet>::Output>;
 }
 
-impl<N, E> ContinuationSet for Transition<N, E>
-where MatchContinuation<N>: ContinuationSet
+pub enum Transition<Next, Exit> {
+    Continue(Next),
+    Exit(Exit),
+}
+
+impl<Next, Exit> Sum for Transition<Next, Exit> {
+    type Left = Next;
+    type Right = Exit;
+
+    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
+        match self {
+            Transition::Continue(next) => Either::Left(next),
+            Transition::Exit(exit) => Either::Right(exit),
+        }
+    }
+}
+
+impl<N, E> StateTransition for Transition<N, E>
+    where MatchContinuation<N>: ContinuationSet
 {
-    type Emit = <MatchContinuation<N> as ContinuationSet>::Emit;
-    type Continue = <MatchContinuation<N> as ContinuationSet>::Continue;
-    type Head = <MatchContinuation<N> as ContinuationSet>::Head;
-    type Suspend = <MatchContinuation<N> as ContinuationSet>::Suspend;
-    type Output = <MatchContinuation<N> as ContinuationSet>::Output;
+    type Continuation = MatchContinuation<N>;
+    type Exit = E;
 }
 
 #[cfg(test)]
 mod tests {
     use fsm::State;
     use cat::enums::Match::*;
-//    use cat::enums::Match;
-//    use cat::sum::{Sum, Either};
-//    use cat::prod::Prod;
     use super::Transition;
     use std::fmt;
 
@@ -92,17 +157,15 @@ mod tests {
 
     impl State for Guess {
         type Input = i64;
-        type Exit = Correct;
-
-        type Transition = Transition<enums![(TooSmall, Guess), (TooBig, Guess)], Self::Exit>;
+        type Transition = Transition<enums![(TooSmall, Guess), (TooBig, Guess)], Correct>;
 
         fn send(self, i: Self::Input) -> Self::Transition {
             if self.0 == i {
                 Transition::Exit(Correct {})
             } else if i < self.0 {
-                Transition::Next(Variant((TooSmall {}, self)))
+                Transition::Continue(Variant((TooSmall {}, self)))
             } else {
-                Transition::Next(Next(Variant((TooBig {}, self))))
+                Transition::Continue(Next(Variant((TooBig {}, self))))
             }
         }
     }
@@ -111,12 +174,10 @@ mod tests {
 
     impl State for Game {
         type Input = i64;
-        type Exit = !;
-
-        type Transition = Transition<enums![((), Guess)], Self::Exit>;
+        type Transition = Transition<enums![((), Guess)], !>;
 
         fn send(self, secret: Self::Input) -> Self::Transition {
-            Transition::Next(Variant(((), Guess(secret))))
+            Transition::Continue(Variant(((), Guess(secret))))
         }
     }
 
@@ -132,16 +193,14 @@ mod tests {
 
     impl State for Maverick {
         type Input = (i64, i64);
-        type Exit = Quit;
-
-        type Transition = Transition<enums![(i64, Strategist)], Self::Exit>;
+        type Transition = Transition<enums![(i64, Strategist)], Quit>;
 
         fn send(self, range: Self::Input) -> Self::Transition {
             if range.0 > range.1 {
                 Transition::Exit(Quit {})
             } else {
                 let guess = (range.0 + range.1) / 2;
-                Transition::Next(Variant((guess, Strategist(range.0, guess, range.1))))
+                Transition::Continue(Variant((guess, Strategist(range.0, guess, range.1))))
             }
         }
     }
@@ -150,9 +209,7 @@ mod tests {
 
     impl State for Strategist {
         type Input = enums![TooSmall, TooBig];
-        type Exit = Quit;
-
-        type Transition = Transition<enums![(i64, Strategist)], Self::Exit>;
+        type Transition = Transition<enums![(i64, Strategist)], Quit>;
 
         fn send(self, result: Self::Input) -> Self::Transition {
             let mav = Maverick {};
@@ -196,11 +253,11 @@ mod tests {
         let game = Game {};
 
         let game = match game.send(16) {
-            Transition::Next(Variant(((), game))) => game,
+            Transition::Continue(Variant(((), game))) => game,
         };
 
         let suspend = match game.send(10) {
-            Transition::Next(suspend) => suspend,
+            Transition::Continue(suspend) => suspend,
             _ => panic!("We didn't guess the number, so the coroutine should not return yet!"),
         };
 
@@ -213,7 +270,7 @@ mod tests {
         };
 
         let suspend = match game.send(19) {
-            Transition::Next(suspend) => suspend,
+            Transition::Continue(suspend) => suspend,
             _ => panic!("We didn't guess the number, so the coroutine should not return yet!"),
         };
 
@@ -238,26 +295,26 @@ mod tests {
 
     fn play(secret: i64, lo: i64, hi: i64) -> Finish<Correct, Quit> {
         let (_, mut game) = match (Game {}.send(secret)) {
-            Transition::Next(Variant(s)) => s,
+            Transition::Continue(Variant(s)) => s,
         };
 
         let player = Maverick {};
 
         let (mut guess, mut player) = match player.send((lo, hi)) {
-            Transition::Next(Variant(x)) => x,
+            Transition::Continue(Variant(x)) => x,
             Transition::Exit(_) => panic!("The range is valid, why did you return?"),
         };
 
 
         loop {
             let (result, game_) = match game.send(guess) {
-                Transition::Next(Variant((r, g))) => (Variant(r), g),
-                Transition::Next(Next(Variant((r, g)))) => (Next(Variant(r)), g),
+                Transition::Continue(Variant((r, g))) => (Variant(r), g),
+                Transition::Continue(Next(Variant((r, g)))) => (Next(Variant(r)), g),
                 Transition::Exit(r) => break Finish::GameWon(r),
             };
             game = game_;
             let (guess_, player_) = match player.send(result) {
-                Transition::Next(Variant(s)) => s,
+                Transition::Continue(Variant(s)) => s,
                 Transition::Exit(r) => break Finish::PlayerGaveUp(r),
             };
             guess = guess_;
