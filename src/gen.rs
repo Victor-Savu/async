@@ -1,5 +1,5 @@
 use std::ops::RangeFrom;
-use fsm::{State, ContinuationSet, Continuation, StateTransition};
+use fsm::{State, ContinuationList, Continuation, StateTransition};
 use cat::sum::{Either, Sum};
 use cat::prod::Prod;
 
@@ -48,10 +48,10 @@ pub struct GenState<S>(S);
 
 impl<S> Generator for GenState<S>
     where S: State<Input = ()>,
-          <S::Transition as StateTransition>::Continuation: ContinuationSet<Suspend = !>,
-          <<S::Transition as StateTransition>::Continuation as ContinuationSet>::Head: Continuation<Continue = S>
+          <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>
 {
-    type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationSet>::Head as Continuation>::Emit;
+    type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit;
     type Return = <S::Transition as StateTransition>::Exit;
     type Transition = GenResult<Self>;
 
