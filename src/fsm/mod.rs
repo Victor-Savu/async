@@ -3,6 +3,27 @@ use cat::prod::Prod;
 
 pub mod match_transition;
 
+pub trait Continuation {
+    /// The type to be emitted if the current continuation transition is activated
+    type Emit;
+    /// The type of the new state the fsm transitions into if the current continuation transition is
+    /// activated
+    type Continue: State;
+    type Output: Prod<Left = Self::Emit, Right = Self::Continue>;
+}
+
+impl Continuation for ! {
+    type Emit = !;
+    type Continue = !;
+    type Output = !;
+}
+
+impl<E, S> Continuation for (E, S) where S: State {
+    type Emit = E;
+    type Continue = S;
+    type Output = Self;
+}
+
 /// Computes the types of possible continuations from the current state of a fsm
 ///
 /// A continuation is a pair-like (product) type of an emitted value and a new state. While the
@@ -11,25 +32,18 @@ pub mod match_transition;
 ///
 /// The `ContinuationSet` computes a list of these continuation types as an enumeration.
 pub trait ContinuationSet {
-    /// The type to be emitted if the current continuation transition is activated
-    type Emit;
-    /// The type of the new state the fsm transitions into if the current continuation transition is
-    /// activated
-    type Continue: State;
     /// The type of the continuation resulting from the activation of the current continuation
     /// transition
-    type Head: Prod<Left = Self::Emit, Right = Self::Continue>;
+    type Head: Continuation;
     /// The type of ContinuationSet to be used for computing the continuations resulting from the
     /// activation of the subsequent continuation transitions
     type Suspend: ContinuationSet;
     /// The discriminated union type used for holding one of the continuations
-    type Output: Sum<Left = Self::Head, Right = <Self::Suspend as ContinuationSet>::Output>;
+    type Output: Sum<Left = <Self::Head as Continuation>::Output, Right = <Self::Suspend as ContinuationSet>::Output>;
 }
 
 /// The never type can be used to show that there are no ensuing continuations
 impl ContinuationSet for ! {
-    type Emit = !;
-    type Continue = !;
     type Head = !;
     type Suspend = !;
     type Output = !;

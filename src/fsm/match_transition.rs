@@ -69,33 +69,27 @@
 //!
 //! fn main() {}
 //! ```
-use fsm::{State, ContinuationSet, StateTransition};
+use fsm::{ContinuationSet, Continuation, StateTransition};
 use cat::enums::Match;
 use cat::sum::{Sum, Either};
 use std::marker::PhantomData;
-use cat::prod::Prod;
 
 
 pub struct MatchContinuation<C>(PhantomData<C>);
 
 impl ContinuationSet for MatchContinuation<!> {
-    type Emit = !;
-    type Continue = !;
     type Head = !;
     type Suspend = !;
     type Output = !;
 }
 
 impl<H, T> ContinuationSet for MatchContinuation<Match<H, T>>
-    where H: Prod,
-          H::Right: State,
+    where H: Continuation,
           MatchContinuation<T>: ContinuationSet
 {
-    type Emit = H::Left;
-    type Continue = H::Right;
     type Head = H;
     type Suspend = MatchContinuation<T>;
-    type Output = Match<Self::Head, <Self::Suspend as ContinuationSet>::Output>;
+    type Output = Match<<Self::Head as Continuation>::Output, <Self::Suspend as ContinuationSet>::Output>;
 }
 
 pub enum Transition<Next, Exit> {
