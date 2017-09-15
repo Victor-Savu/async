@@ -1,5 +1,5 @@
 use std::ops::RangeFrom;
-use fsm::{State, ContinuationSet};
+use fsm::{State, ContinuationList, Continuation, StateTransition};
 use cat::sum::{Either, Sum};
 use cat::prod::Prod;
 
@@ -48,16 +48,17 @@ pub struct GenState<S>(S);
 
 impl<S> Generator for GenState<S>
     where S: State<Input = ()>,
-          S::Transition: ContinuationSet<Continue = S, Suspend = !>
+          <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>
 {
-    type Yield = <<<S::Transition as Sum>::Left as Sum>::Left as Prod>::Left;
-    type Return = S::Exit;
+    type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit;
+    type Return = <S::Transition as StateTransition>::Exit;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0.send(()).to_canonical() {
             Either::Left(cont) => {
-                let ei: Either<<S::Transition as ContinuationSet>::Head, !> = cont.to_canonical();
+                let ei = cont.to_canonical();
                 let (y, c) = match ei {
                         Either::Left(l) => l,
                     }
