@@ -1,5 +1,5 @@
 use gen::{Generator, GenResult};
-use either::GenEither;
+use gen::either::GenEither;
 use cat::sum::{Either, Sum};
 use cat::prod::Prod;
 
@@ -57,10 +57,10 @@ impl<C> Race for C where C: Generator {}
 #[cfg(test)]
 mod tests {
 
-    use iter::wrap::Wrap;
-    use map::ret::MapReturn;
-    use comb::race::Race;
-    use either::GenEither;
+    use gen::iter::wrap::Wrap;
+    use gen::map::ret::MapReturn;
+    use gen::comb::race::Race;
+    use gen::either::GenEither;
 
     #[test]
     fn race() {

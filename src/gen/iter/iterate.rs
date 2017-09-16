@@ -40,7 +40,7 @@ impl<C> Iterate for C where C: Generator {}
 #[cfg(test)]
 mod tests {
 
-    use iter::{Iterate, Wrap};
+    use gen::iter::{Iterate, Wrap};
 
     #[test]
     fn iterate_over_coroutine() {

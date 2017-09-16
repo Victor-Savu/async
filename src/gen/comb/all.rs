@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
 use gen::{Generator, GenResult};
-use either::GenEither;
-use comb::race::{GenRace, Race};
-use comb::chain::{GenChain, Chain};
-use map::ret::{GenMapReturn, MapReturn};
+use gen::either::GenEither;
+use gen::comb::race::{GenRace, Race};
+use gen::comb::chain::{GenChain, Chain};
+use gen::map::ret::{GenMapReturn, MapReturn};
 
 pub struct Prepend<F>(F);
 
@@ -98,9 +98,9 @@ impl<F> All for F where F: Generator {}
 #[cfg(test)]
 mod tests {
 
-    use iter::wrap::Wrap;
-    use comb::all::All;
-    use map::ret::MapReturn;
+    use gen::iter::wrap::Wrap;
+    use gen::comb::all::All;
+    use gen::map::ret::MapReturn;
 
     #[test]
     fn all() {

@@ -5,12 +5,6 @@
 
 #[macro_use]
 pub mod cat;
-#[macro_use]
-pub mod each;
 
-pub mod comb;
-pub mod either;
-pub mod fsm;
 pub mod gen;
-pub mod iter;
-pub mod map;
+pub mod fsm;

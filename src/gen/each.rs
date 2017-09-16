@@ -507,9 +507,9 @@ macro_rules! each {
 #[cfg(test)]
 mod tests {
 
-    use iter::wrap::Wrap;
-    use map::ret::MapReturn;
-    use map::yld::MapYield;
+    use gen::iter::wrap::Wrap;
+    use gen::map::ret::MapReturn;
+    use gen::map::yld::MapYield;
     use gen::Generator;
 
     #[test]

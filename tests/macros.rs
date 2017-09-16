@@ -3,7 +3,7 @@ extern crate o3;
 
 #[test]
 fn each_works() {
-    use o3::iter::wrap::Wrap;
+    use o3::gen::iter::wrap::Wrap;
 
     let mut v = vec![];
     each!((3..10).wrap() => i in {

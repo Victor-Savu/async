@@ -1,3 +1,10 @@
+#[macro_use]
+pub mod each;
+pub mod comb;
+pub mod either;
+pub mod iter;
+pub mod map;
+
 use std::ops::RangeFrom;
 use fsm::{State, ContinuationList, Continuation, StateTransition};
 use cat::sum::{Either, Sum};

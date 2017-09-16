@@ -1,6 +1,6 @@
-use map::ret::{MapReturn, GenMapReturn};
+use gen::map::ret::{MapReturn, GenMapReturn};
 use gen::{Generator, GenResult};
-use comb::join::{Join, GenJoin};
+use gen::comb::join::{Join, GenJoin};
 
 
 pub struct GenChain<F, L>(GenJoin<GenMapReturn<F, L>>)
@@ -41,8 +41,8 @@ impl<F> Chain for F where F: Generator {}
 #[cfg(test)]
 mod tests {
 
-    use iter::wrap::Wrap;
-    use comb::chain::Chain;
+    use gen::iter::wrap::Wrap;
+    use gen::comb::chain::Chain;
 
     #[test]
     fn chain_integers() {

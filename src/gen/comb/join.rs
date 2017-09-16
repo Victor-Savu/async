@@ -62,9 +62,9 @@ impl<C> Join for C
 #[cfg(test)]
 mod tests {
 
-    use comb::join::Join;
-    use map::ret::MapReturn;
-    use iter::wrap::Wrap;
+    use gen::comb::join::Join;
+    use gen::map::ret::MapReturn;
+    use gen::iter::wrap::Wrap;
 
     #[test]
     fn chain_integers() {

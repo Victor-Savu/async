@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use gen::{Generator, GenResult};
-use map::ret::{GenMapReturn, MapReturn};
-use comb::all::{GenAll, All};
+use gen::map::ret::{GenMapReturn, MapReturn};
+use gen::comb::all::{GenAll, All};
 
 pub struct ApplyFn<F, I>(PhantomData<(F, I)>) where F: FnOnce<(I,)>;
 
@@ -67,8 +67,8 @@ impl<I, T> Apply<I> for T
 #[cfg(test)]
 mod tests {
 
-    use comb::done::Done;
-    use comb::apply::Apply;
+    use gen::comb::done::Done;
+    use gen::comb::apply::Apply;
 
     #[test]
     fn apply() {
