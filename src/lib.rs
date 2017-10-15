@@ -6,5 +6,5 @@
 #[macro_use]
 pub mod cat;
 
-pub mod gen;
 pub mod fsm;
+pub mod gen;

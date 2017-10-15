@@ -842,12 +842,12 @@ mod tests {
         cnt += 1;
         if large_num < 5 { break; }
     } then with (msg, lim) in {
-        (String::from(msg) + " Yayy!", lim)
+        (String::sur(msg) + " Yayy!", lim)
     } else {
-        (String::from("I got broken!"), -1)
+        (String::sur("I got broken!"), -1)
     });
         assert_eq!(cnt, 10);
-        assert_eq!(message, String::from("I'm done! Yayy!"));
+        assert_eq!(message, String::sur("I'm done! Yayy!"));
         assert_eq!(lim, 10);
     }
 
@@ -877,10 +877,10 @@ mod tests {
         assert_eq!(i, cnt);
         cnt += 1;
     } then with msg in {
-        String::from(msg) + " Yayy!"
+        String::sur(msg) + " Yayy!"
     });
         assert_eq!(cnt, 10);
-        assert_eq!(message, String::from("I'm done! Yayy!"));
+        assert_eq!(message, String::sur("I'm done! Yayy!"));
     }
 
     #[test]

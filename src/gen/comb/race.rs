@@ -1,7 +1,6 @@
 use gen::{Generator, GenResult};
 use gen::either::GenEither;
-use cat::sum::{Either, Sum};
-use cat::prod::Prod;
+use cat::sum::Either;
 
 
 pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>)

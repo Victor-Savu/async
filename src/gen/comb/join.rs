@@ -1,6 +1,5 @@
 use gen::{Generator, GenResult};
-use cat::sum::{Either, Sum};
-use cat::prod::Prod;
+use cat::sum::Either;
 
 pub enum GenJoin<C>
     where C: Generator
@@ -41,20 +40,14 @@ impl<C> Generator for GenJoin<C>
     }
 }
 
-pub trait Join
-    where Self: Generator,
-          Self::Return: Generator,
-          Self::Yield: From<<Self::Return as Generator>::Yield>
+pub trait Join where Self: Generator
 {
     fn join(self) -> GenJoin<Self> {
         GenJoin::Outer(self)
     }
 }
 
-impl<C> Join for C
-    where C: Generator,
-          C::Return: Generator,
-          C::Yield: From<<C::Return as Generator>::Yield>
+impl<C> Join for C where C: Generator
 {
 }
 

@@ -70,6 +70,7 @@
 //! fn main() {}
 //! ```
 use fsm::{ContinuationList, Continuation, StateTransition};
+use cat::{Iso, Sur, Inj};
 use cat::enums::Match;
 use cat::sum::{Sum, Either};
 use std::marker::PhantomData;
@@ -100,15 +101,28 @@ pub enum Transition<Next, Exit> {
 impl<Next, Exit> Sum for Transition<Next, Exit> {
     type Left = Next;
     type Right = Exit;
+    type Output = Self;
+}
 
-    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
-        match self {
-            Transition::Continue(next) => Either::Left(next),
-            Transition::Exit(exit) => Either::Right(exit),
+impl<A, B> Sur<Either<A, B>> for Transition<A, B> {
+    fn sur(e: Either<A, B>) -> Self {
+        match e {
+            Either::Left(cont) => Transition::Continue(cont),
+            Either::Right(exit) => Transition::Exit(exit),
         }
     }
 }
 
+unsafe impl<A, B> Iso<Either<A, B>> for Transition<A, B> {}
+
+impl <A, B> Inj<Either<A, B>> for Transition<A, B> {
+    fn inj(self) -> Either<A, B> {
+        match self {
+            Transition::Continue(cont) => Either::Left(cont),
+            Transition::Exit(exit) => Either::Right(exit),
+        }
+    }
+}
 impl<N, E> StateTransition for Transition<N, E>
     where MatchContinuation<N>: ContinuationList
 {

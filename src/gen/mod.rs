@@ -9,16 +9,17 @@ use std::ops::RangeFrom;
 use fsm::{State, ContinuationList, Continuation, StateTransition};
 use cat::sum::{Either, Sum};
 use cat::prod::Prod;
+use cat::{Iso, Sur, Inj};
 
 pub trait GenSuspend {
     type Gen: Generator;
-    type Output: Prod<Left = <Self::Gen as Generator>::Yield, Right = Self::Gen>;
+    type Output: Iso<(<Self::Gen as Generator>::Yield, Self::Gen)> + Prod<Left = <Self::Gen as Generator>::Yield, Right = Self::Gen, Output = Self::Output>;
 }
 
 pub trait Generator: Sized {
     type Yield;
     type Return;
-    type Transition: GenSuspend<Gen = Self> + Sum<Left = <Self::Transition as GenSuspend>::Output, Right = Self::Return>;
+    type Transition: GenSuspend<Gen = Self> + Iso<Either<<Self::Transition as GenSuspend>::Output, Self::Return>> + Sum<Left = <Self::Transition as GenSuspend>::Output, Right = Self::Return, Output = Self::Transition>;
 
     fn next(self) -> Self::Transition;
 }
@@ -42,14 +43,28 @@ impl<Coro> Sum for GenResult<Coro>
 {
     type Left = (Coro::Yield, Coro);
     type Right = Coro::Return;
+    type Output = Self;
+}
 
-    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
+impl<Coro> Sur<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  where Coro: Generator {
+    fn sur(e: Either<(Coro::Yield, Coro), Coro::Return>) -> Self {
+        match e {
+            Either::Left((y, c)) => GenResult::Yield(y, c),
+            Either::Right(r) => GenResult::Return(r),
+        }
+    }
+}
+
+impl<Coro> Inj<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  where Coro: Generator {
+    fn inj(self) -> Either<(Coro::Yield, Coro), Coro::Return> {
         match self {
             GenResult::Yield(y, c) => Either::Left((y, c)),
             GenResult::Return(r) => Either::Right(r),
         }
     }
 }
+
+unsafe impl<Coro> Iso<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  where Coro: Generator {}
 
 pub struct GenState<S>(S);
 

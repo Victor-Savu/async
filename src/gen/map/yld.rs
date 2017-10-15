@@ -1,6 +1,6 @@
 use gen::{Generator, GenResult};
-use cat::sum::{Sum, Either};
-use cat::prod::Prod;
+use cat::sum::Either;
+
 
 pub struct GenMapYield<C, F>(C, F);
 
