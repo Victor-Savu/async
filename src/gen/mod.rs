@@ -8,18 +8,12 @@ pub mod map;
 use std::ops::RangeFrom;
 use fsm::{State, ContinuationList, Continuation, StateTransition};
 use cat::sum::{Either, Sum};
-use cat::prod::Prod;
 use cat::{Iso, Sur, Inj};
-
-pub trait GenSuspend {
-    type Gen: Generator;
-    type Output: Iso<(<Self::Gen as Generator>::Yield, Self::Gen)> + Prod<Left = <Self::Gen as Generator>::Yield, Right = Self::Gen, Output = Self::Output>;
-}
 
 pub trait Generator: Sized {
     type Yield;
     type Return;
-    type Transition: GenSuspend<Gen = Self> + Iso<Either<<Self::Transition as GenSuspend>::Output, Self::Return>> + Sum<Left = <Self::Transition as GenSuspend>::Output, Right = Self::Return, Output = Self::Transition>;
+    type Transition: Iso<Either<(Self::Yield, Self), Self::Return>>;
 
     fn next(self) -> Self::Transition;
 }
@@ -29,13 +23,6 @@ pub enum GenResult<Coro>
 {
     Yield(Coro::Yield, Coro),
     Return(Coro::Return),
-}
-
-impl<Coro> GenSuspend for GenResult<Coro>
-    where Coro: Generator
-{
-    type Gen = Coro;
-    type Output = (Coro::Yield, Coro);
 }
 
 impl<Coro> Sum for GenResult<Coro>
@@ -71,20 +58,22 @@ pub struct GenState<S>(S);
 impl<S> Generator for GenState<S>
     where S: State<Input = ()>,
           <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
-          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>,
+          <<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
+          <<<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
 {
     type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit;
     type Return = <S::Transition as StateTransition>::Exit;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
-        match self.0.send(()).to_canonical() {
+        match self.0.send(()).inj() {
             Either::Left(cont) => {
-                let ei = cont.to_canonical();
+                let ei = cont.inj();
                 let (y, c) = match ei {
                         Either::Left(l) => l,
                     }
-                    .to_canonical();
+                    .inj();
                 GenResult::Yield(y, GenState(c))
             }
             Either::Right(ret) => GenResult::Return(ret),

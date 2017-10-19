@@ -31,6 +31,7 @@ unsafe impl<F, L> Iso<Either<F, L>> for GenEither<F, L>  {}
 impl<F, L> Generator for GenEither<F, L>
     where F: Generator,
           L: Generator<Yield = F::Yield, Return = F::Return>,
+          <L as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, L), <F as Generator>::Return>>
 {
     type Yield = F::Yield;
     type Return = F::Return;
@@ -39,18 +40,18 @@ impl<F, L> Generator for GenEither<F, L>
     fn next(self) -> GenResult<Self> {
         match self {
             GenEither::Former(f) => {
-                match f.next().to_canonical() {
+                match f.next().inj() {
                     Either::Left(s) => {
-                        let (y, f) = s.to_canonical();
+                        let (y, f) = s.inj();
                         GenResult::Yield(y, GenEither::Former(f))
                     }
                     Either::Right(r) => GenResult::Return(r),
                 }
             }
             GenEither::Latter(l) => {
-                match l.next().to_canonical() {
+                match l.next().inj() {
                     Either::Left(s) => {
-                        let (y, l) = s.to_canonical();
+                        let (y, l) = s.inj();
                         GenResult::Yield(y, GenEither::Latter(l))
                     }
                     Either::Right(r) => GenResult::Return(r),

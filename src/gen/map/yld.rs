@@ -1,5 +1,6 @@
 use gen::{Generator, GenResult};
 use cat::sum::Either;
+use cat::Inj;
 
 
 pub struct GenMapYield<C, F>(C, F);
@@ -14,9 +15,9 @@ impl<C, F> Generator for GenMapYield<C, F>
 
     fn next(self) -> GenResult<Self> {
         let mut f = self.1;
-        match self.0.next().to_canonical() {
+        match self.0.next().inj() {
             Either::Left(s) => {
-                let (y, c) = s.to_canonical();
+                let (y, c) = s.inj();
                 GenResult::Yield(f(y), c.map_yield(f))
             }
             Either::Right(res) => GenResult::Return(res),

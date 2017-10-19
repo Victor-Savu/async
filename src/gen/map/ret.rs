@@ -1,5 +1,6 @@
 use gen::{Generator, GenResult};
 use cat::sum::Either;
+use cat::Inj;
 
 pub struct GenMapReturn<C, F>(C, F);
 
@@ -12,9 +13,9 @@ impl<C, F> Generator for GenMapReturn<C, F>
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
-        match self.0.next().to_canonical() {
+        match self.0.next().inj() {
             Either::Left(s) => {
-                let (y, c) = s.to_canonical();
+                let (y, c) = s.inj();
                 GenResult::Yield(y, c.map_return(self.1))
             }
             Either::Right(res) => GenResult::Return((self.1)(res)),

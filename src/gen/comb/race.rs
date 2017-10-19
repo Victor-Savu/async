@@ -1,15 +1,19 @@
 use gen::{Generator, GenResult};
 use gen::either::GenEither;
 use cat::sum::Either;
+use cat::{Iso, Inj};
 
 
 pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>)
     where F: Generator,
-          L: Generator<Yield = F::Yield>;
+          L: Generator<Yield = F::Yield>,
+          <L as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, L), <L as Generator>::Return>>
+          ;
 
 
 impl<F, L> Generator for GenRace<F, L>
     where F: Generator,
+          <L as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, L), <L as Generator>::Return>>,
           L: Generator<Yield = F::Yield>
 {
     type Yield = F::Yield;
@@ -19,18 +23,18 @@ impl<F, L> Generator for GenRace<F, L>
     fn next(self) -> GenResult<Self> {
         match self.0 {
             GenEither::Former((f, l)) => {
-                match f.next().to_canonical() {
+                match f.next().inj() {
                     Either::Left(s) => {
-                        let (y, f) = s.to_canonical();
+                        let (y, f) = s.inj();
                         GenResult::Yield(y, GenRace(GenEither::Latter((f, l))))
                     }
                     Either::Right(f) => GenResult::Return(GenEither::Former((f, l))),
                 }
             }
             GenEither::Latter((f, l)) => {
-                match l.next().to_canonical() {
+                match l.next().inj() {
                     Either::Left(s) => {
-                        let (y, l) = s.to_canonical();
+                        let (y, l) = s.inj();
                         GenResult::Yield(y, GenRace(GenEither::Former((f, l))))
                     }
                     Either::Right(l) => GenResult::Return(GenEither::Latter((f, l))),
@@ -44,7 +48,8 @@ pub trait Race
     where Self: Generator
 {
     fn race<L>(self, l: L) -> GenRace<Self, L>
-        where L: Generator<Yield = Self::Yield>
+        where L: Generator<Yield = Self::Yield>,
+              <L as Generator>::Transition: Iso<Either<(<Self as Generator>::Yield, L), <L as Generator>::Return>>
     {
         GenRace(GenEither::Former((self, l)))
     }

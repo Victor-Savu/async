@@ -1,5 +1,6 @@
 use gen::{Generator, GenResult};
 use cat::sum::Either;
+use cat::{Iso, Inj};
 
 pub enum GenJoin<C>
     where C: Generator
@@ -10,7 +11,8 @@ pub enum GenJoin<C>
 
 impl<C> Generator for GenJoin<C>
     where C: Generator,
-          C::Return: Generator<Yield = C::Yield>
+          C::Return: Generator<Yield = C::Yield>,
+          <<C as Generator>::Return as Generator>::Transition: Iso<Either<(<C as Generator>::Yield, <C as Generator>::Return), <<C as Generator>::Return as Generator>::Return>>
 {
     type Yield = C::Yield;
     type Return = <C::Return as Generator>::Return;
@@ -19,18 +21,18 @@ impl<C> Generator for GenJoin<C>
     fn next(self) -> GenResult<Self> {
         match self {
             GenJoin::Outer(c) => {
-                match c.next().to_canonical() {
+                match c.next().inj() {
                     Either::Left(s) => {
-                        let (y, outer) = s.to_canonical();
+                        let (y, outer) = s.inj();
                         GenResult::Yield(y, outer.join())
                     }
                     Either::Right(inner) => GenJoin::Inner(inner).next(),
                 }
             }
             GenJoin::Inner(c) => {
-                match c.next().to_canonical() {
+                match c.next().inj() {
                     Either::Left(s) => {
-                        let (y, inner) = s.to_canonical();
+                        let (y, inner) = s.inj();
                         GenResult::Yield(y, GenJoin::Inner(inner))
                     }
                     Either::Right(result) => GenResult::Return(result),

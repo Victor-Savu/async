@@ -2,7 +2,8 @@ use gen::{Generator, GenResult};
 
 pub struct GenDone<U>(U);
 
-impl<U> Generator for GenDone<U> {
+impl<U> Generator for GenDone<U>
+{
     type Yield = !;
     type Return = U;
     type Transition = GenResult<Self>;

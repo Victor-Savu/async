@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use cat::Iso;
+use cat::sum::Either;
 use gen::{Generator, GenResult};
 use gen::either::GenEither;
 use gen::comb::race::{GenRace, Race};
@@ -40,9 +42,12 @@ impl<I, F> FnOnce<(I,)> for Append<F> {
 
 pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>)
     where F: Generator,
-          L: Generator<Yield = F::Yield>;
+          L: Generator<Yield = F::Yield>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>;
 
-impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L> {
+impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L>
+    where L::Transition: Iso<Either<(F::Yield, L), L::Return>>
+{
     fn new() -> Self {
         ContinueRemaining(PhantomData)
     }
@@ -50,7 +55,8 @@ impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L> {
 
 impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
     where F: Generator,
-          L: Generator<Yield = F::Yield>
+          L: Generator<Yield = F::Yield>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>
 {
     type Output = GenEither<GenMapReturn<L, Prepend<F::Return>>, GenMapReturn<F, Append<L::Return>>>;
 
@@ -66,11 +72,13 @@ impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRema
 
 pub struct GenAll<F, L>(GenChain<GenRace<F, L>, ContinueRemaining<F, L>>)
     where F: Generator,
-          L: Generator<Yield = F::Yield>;
+          L: Generator<Yield = F::Yield>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>;
 
 impl<F, L> Generator for GenAll<F, L>
     where F: Generator,
-          L: Generator<Yield = F::Yield>
+          L: Generator<Yield = F::Yield>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>
 {
     type Yield = F::Yield;
     type Return = (F::Return, L::Return);
@@ -86,7 +94,8 @@ impl<F, L> Generator for GenAll<F, L>
 
 pub trait All: Generator {
     fn all<L>(self, l: L) -> GenAll<Self, L>
-        where L: Generator<Yield = Self::Yield>
+        where L: Generator<Yield = Self::Yield>,
+              <L as Generator>::Transition: Iso<Either<(<Self as Generator>::Yield, L), <L as Generator>::Return>>
     {
         GenAll(self.race(l).chain(ContinueRemaining::new()))
     }

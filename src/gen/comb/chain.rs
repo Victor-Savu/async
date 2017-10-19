@@ -1,3 +1,5 @@
+use cat::Iso;
+use cat::sum::Either;
 use gen::map::ret::{MapReturn, GenMapReturn};
 use gen::{Generator, GenResult};
 use gen::comb::join::{Join, GenJoin};
@@ -6,11 +8,14 @@ use gen::comb::join::{Join, GenJoin};
 pub struct GenChain<F, L>(GenJoin<GenMapReturn<F, L>>)
     where F: Generator,
           L: FnOnce<(F::Return,)>,
-          L::Output: Generator<Yield = F::Yield>;
+          L::Output: Generator<Yield = F::Yield>,
+          <<L as FnOnce<(<F as Generator>::Return,)>>::Output as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, <L as FnOnce<(<F as Generator>::Return,)>>::Output), <<L as FnOnce<(<F as Generator>::Return,)>>::Output as Generator>::Return>>
+          ;
 
 impl<F, L> Generator for GenChain<F, L>
     where F: Generator,
           L: FnOnce<(F::Return,)>,
+          <<L as FnOnce<(<F as Generator>::Return,)>>::Output as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, <L as FnOnce<(<F as Generator>::Return,)>>::Output), <<L as FnOnce<(<F as Generator>::Return,)>>::Output as Generator>::Return>>,
           L::Output: Generator<Yield = F::Yield>
 {
     type Yield = F::Yield;
@@ -30,7 +35,8 @@ pub trait Chain
 {
     fn chain<L>(self, l: L) -> GenChain<Self, L>
         where L: FnOnce<(Self::Return,)>,
-              L::Output: Generator<Yield = Self::Yield>
+              L::Output: Generator<Yield = Self::Yield>,
+              <<L as FnOnce<(<Self as Generator>::Return,)>>::Output as Generator>::Transition: Iso<Either<(<Self as Generator>::Yield, <L as FnOnce<(<Self as Generator>::Return,)>>::Output), <<L as FnOnce<(<Self as Generator>::Return,)>>::Output as Generator>::Return>>
     {
         GenChain(self.map_return(l).join())
     }

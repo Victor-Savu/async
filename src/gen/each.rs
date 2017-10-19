@@ -11,9 +11,9 @@ macro_rules! _each_impl {
     let mut iter_ = $iter;
     'outer: loop {
         let $else_ = loop {
-            match $crate::cat::sum::Sum::to_canonical($crate::gen::Generator::next(iter_)) {
+            match $crate::cat::Inj::inj($crate::gen::Generator::next(iter_)) {
                 $crate::cat::sum::Either::Left(s) => {
-                    let ($elem, tail) = $crate::cat::prod::Prod::to_canonical(s);
+                    let ($elem, tail) = $crate::cat::Inj::inj(s);
                     #[allow(unused_assignments)] {
                         iter_ = tail
                     }
@@ -37,9 +37,9 @@ macro_rules! _each_impl {
     let mut iter_ = $iter;
     loop {
         #[allow(unreachable_patterns)] {
-            match $crate::cat::sum::Sum::to_canonical($crate::gen::Generator::next(iter_)) {
+            match $crate::cat::Inj::inj($crate::gen::Generator::next(iter_)) {
                 $crate::cat::sum::Either::Left(s) => {
-                    let ($elem, tail) = $crate::cat::prod::Prod::to_canonical(s);
+                    let ($elem, tail) = $crate::cat::Inj::inj(s);
                     #[allow(unused_assignments)] {
                         iter_ = tail
                     }
@@ -837,17 +837,17 @@ mod tests {
         let mut cnt = 3;
         let large_num = 1000;
         let (message, lim) = each!(bart => (i, lim) in {
-        assert_eq!(i, cnt);
-        assert_eq!(lim, 10);
-        cnt += 1;
-        if large_num < 5 { break; }
-    } then with (msg, lim) in {
-        (String::sur(msg) + " Yayy!", lim)
-    } else {
-        (String::sur("I got broken!"), -1)
-    });
+            assert_eq!(i, cnt);
+            assert_eq!(lim, 10);
+            cnt += 1;
+            if large_num < 5 { break; }
+        } then with (msg, lim) in {
+            (String::from(msg) + " Yayy!", lim)
+        } else {
+            (String::from("I got broken!"), -1)
+        });
         assert_eq!(cnt, 10);
-        assert_eq!(message, String::sur("I'm done! Yayy!"));
+        assert_eq!(message, String::from("I'm done! Yayy!"));
         assert_eq!(lim, 10);
     }
 
@@ -877,10 +877,10 @@ mod tests {
         assert_eq!(i, cnt);
         cnt += 1;
     } then with msg in {
-        String::sur(msg) + " Yayy!"
+        String::from(msg) + " Yayy!"
     });
         assert_eq!(cnt, 10);
-        assert_eq!(message, String::sur("I'm done! Yayy!"));
+        assert_eq!(message, String::from("I'm done! Yayy!"));
     }
 
     #[test]
