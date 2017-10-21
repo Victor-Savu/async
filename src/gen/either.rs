@@ -42,9 +42,6 @@ impl<F, L> Returns for GenEither<F, L>
 }
 
 impl<F, L> Generator for GenEither<F, L>
-    where F: Generator,
-          L: Generator<Yield = F::Yield, Return = F::Return>,
-          L::Transition: Iso<Either<(F::Yield, L), F::Return>>
 {
     type Transition = GenResult<Self>;
 

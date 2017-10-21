@@ -6,7 +6,7 @@ use gen::{Generator, GenResult, Yields, Returns};
 use gen::map::ret::{GenMapReturn, MapReturn};
 use gen::comb::all::{GenAll, All};
 
-pub struct ApplyFn<F, I>(PhantomData<(F, I)>) where F: FnOnce<(I,)>;
+pub struct ApplyFn<F, I>(PhantomData<(F, I)>);
 
 impl<F, I> FnOnce<((F, I),)> for ApplyFn<F, I>
     where F: FnOnce<(I,)>
@@ -19,18 +19,10 @@ impl<F, I> FnOnce<((F, I),)> for ApplyFn<F, I>
 }
 
 pub struct GenApply<F, C>(GenMapReturn<GenAll<F, C>, ApplyFn<F::Return, C::Return>>)
-    where C: Generator,
-          F: Generator<Yield = C::Yield>,
-          C::Transition: Iso<Either<(C::Yield, F), F::Return>>,
-          F::Transition: Iso<Either<(C::Yield, F), F::Return>>,
-          F::Return: FnOnce<(C::Return,)>;
+    where C: Returns,
+          F: Returns;
 
 impl<F, C> GenApply<F, C>
-    where C: Generator,
-          F: Generator<Yield = C::Yield>,
-          C::Transition: Iso<Either<(C::Yield, F), F::Return>>,
-          F::Transition: Iso<Either<(C::Yield, F), F::Return>>,
-          F::Return: FnOnce<(C::Return,)>
 {
     fn new(functor: F, c: C) -> Self {
         GenApply(functor.all(c).map_return(ApplyFn(PhantomData)))
@@ -51,11 +43,6 @@ impl<C, F> Returns for GenApply<F, C>
 }
 
 impl<C, F> Generator for GenApply<F, C>
-    where C: Generator,
-          F: Generator<Yield = C::Yield>,
-          C::Transition: Iso<Either<(C::Yield, F), F::Return>>,
-          F::Transition: Iso<Either<(C::Yield, F), F::Return>>,
-          F::Return: FnOnce<(C::Return,)>
 {
     type Transition = GenResult<Self>;
 
@@ -68,24 +55,17 @@ impl<C, F> Generator for GenApply<F, C>
 }
 
 pub trait Apply<I>: Generator
-    where Self::Return: FnOnce<(I,)>
 {
     fn apply<C>(self, c: C) -> GenApply<Self, C>
-        where C: Generator<Yield = Self::Yield, Return = I>,
-              C::Transition: Iso<Either<(Self::Yield, C), I>>,
-              C::Transition: Iso<Either<(Self::Yield, Self), Self::Return>>
     {
         GenApply::new(self, c)
     }
 }
 
 impl<I, T> Apply<I> for T
-    where T: Generator,
-          T::Return: FnOnce<(I,)>
 {
 }
 
-/*
 #[cfg(test)]
 mod tests {
 
@@ -99,4 +79,3 @@ mod tests {
         assert_eq!(res, 4);
     }
 }
-*/

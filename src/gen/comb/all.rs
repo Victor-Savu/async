@@ -40,13 +40,9 @@ impl<I, F> FnOnce<(I,)> for Append<F> {
     }
 }
 
-pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>)
-    where F: Generator,
-          L: Generator<Yield = F::Yield>,
-          L::Transition: Iso<Either<(F::Yield, L), L::Return>>;
+pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>);
 
-impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L>
-    where L::Transition: Iso<Either<(F::Yield, L), L::Return>>
+impl<F, L> ContinueRemaining<F, L>
 {
     fn new() -> Self {
         ContinueRemaining(PhantomData)
@@ -54,9 +50,8 @@ impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L>
 }
 
 impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
-    where F: Generator,
-          L: Generator<Yield = F::Yield>,
-          L::Transition: Iso<Either<(F::Yield, L), L::Return>>
+    where F: Returns,
+          L: Returns
 {
     type Output = GenEither<GenMapReturn<L, Prepend<F::Return>>, GenMapReturn<F, Append<L::Return>>>;
 
@@ -86,9 +81,8 @@ impl<F, L> Returns for GenAll<F, L>
 }
 
 impl<F, L> Generator for GenAll<F, L>
-    where F: Generator,
-          L: Generator<Yield = F::Yield>,
-          L::Transition: Iso<Either<(F::Yield, L), L::Return>>
+    where F: Yields + Returns,
+          L: Returns
 {
     type Transition = GenResult<Self>;
 
@@ -100,16 +94,14 @@ impl<F, L> Generator for GenAll<F, L>
     }
 }
 
-pub trait All: Generator {
+pub trait All {
     fn all<L>(self, l: L) -> GenAll<Self, L>
-        where L: Generator<Yield = Self::Yield>,
-              L::Transition: Iso<Either<(Self::Yield, L), L::Return>>
     {
         GenAll(self.race(l).chain(ContinueRemaining::new()))
     }
 }
 
-impl<F> All for F where F: Generator {}
+impl<F> All for F {}
 
 
 #[cfg(test)]

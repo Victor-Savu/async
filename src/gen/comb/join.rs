@@ -3,7 +3,7 @@ use cat::sum::Either;
 use cat::{Iso, Inj};
 
 pub enum GenJoin<C>
-    where C: Generator
+    where C: Returns
 {
     Outer(C),
     Inner(C::Return),
@@ -23,10 +23,7 @@ impl<C> Returns for GenJoin<C>
 }
 
 impl<C> Generator for GenJoin<C>
-    where C: Generator,
-          C::Return: Generator<Yield = C::Yield>,
-          <C::Return as Generator>::Transition: Iso<Either<(C::Yield, C::Return),
-                                                           <C::Return as Returns>::Return>>
+    where C: Yields + Returns,
 {
     type Transition = GenResult<Self>;
 
@@ -55,14 +52,13 @@ impl<C> Generator for GenJoin<C>
 }
 
 pub trait Join
-    where Self: Generator
 {
     fn join(self) -> GenJoin<Self> {
         GenJoin::Outer(self)
     }
 }
 
-impl<C> Join for C where C: Generator {}
+impl<C> Join for C {}
 
 
 #[cfg(test)]

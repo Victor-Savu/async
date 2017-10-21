@@ -4,10 +4,7 @@ use cat::sum::Either;
 use cat::{Iso, Inj};
 
 
-pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>)
-    where F: Generator,
-          L: Generator<Yield = F::Yield>,
-          L::Transition: Iso<Either<(F::Yield, L), L::Return>>;
+pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>);
 
 impl<F, L> Yields for GenRace<F, L>
     where F: Yields
@@ -23,9 +20,6 @@ impl<F, L> Returns for GenRace<F, L>
 }
 
 impl<F, L> Generator for GenRace<F, L>
-    where F: Generator,
-          L::Transition: Iso<Either<(F::Yield, L), L::Return>>,
-          L: Generator<Yield = F::Yield>
 {
     type Transition = GenResult<Self>;
 
@@ -54,17 +48,14 @@ impl<F, L> Generator for GenRace<F, L>
 }
 
 pub trait Race
-    where Self: Generator
 {
     fn race<L>(self, l: L) -> GenRace<Self, L>
-        where L: Generator<Yield = Self::Yield>,
-              L::Transition: Iso<Either<(Self::Yield, L), L::Return>>
     {
         GenRace(GenEither::Former((self, l)))
     }
 }
 
-impl<C> Race for C where C: Generator {}
+impl<C> Race for C {}
 
 
 #[cfg(test)]

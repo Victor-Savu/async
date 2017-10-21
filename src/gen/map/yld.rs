@@ -7,7 +7,7 @@ pub struct GenMapYield<C, F>(C, F);
 
 impl<C, F> Yields for GenMapYield<C, F>
     where C: Yields,
-          F: FnMut<(C::Yield,)>
+          F: FnOnce<(C::Yield,)>
 {
     type Yield = F::Output;
 }

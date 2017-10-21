@@ -69,21 +69,15 @@ unsafe impl<Coro> Iso<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<C
 pub struct GenState<S>(S);
 
 impl<S> Yields for GenState<S>
-    where S: State<Input = ()>,
-          <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
-          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>,
-          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
-          <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
+    where S: State,
+          <S::Transition as StateTransition>::Continuation: ContinuationList,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation,
 {
     type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit;
 }
 
 impl<S> Returns for GenState<S>
-    where S: State<Input = ()>,
-          <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
-          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>,
-          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
-          <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
+    where S: State,
 {
     type Return = <S::Transition as StateTransition>::Exit;
 }
