@@ -10,7 +10,7 @@ pub enum GenJoin<C>
 }
 
 impl<C> Yields for GenJoin<C>
-    where C: Yields
+    where C: Yields + Returns
 {
     type Yield = C::Yield;
 }
@@ -23,7 +23,9 @@ impl<C> Returns for GenJoin<C>
 }
 
 impl<C> Generator for GenJoin<C>
-    where C: Yields + Returns,
+    where C: Generator,
+          C::Return: Generator<Yield = C::Yield>,
+          <C::Return as Generator>::Transition: Iso<Either<(C::Yield, C::Return), <C::Return as Returns>::Return>>
 {
     type Transition = GenResult<Self>;
 
@@ -53,7 +55,8 @@ impl<C> Generator for GenJoin<C>
 
 pub trait Join
 {
-    fn join(self) -> GenJoin<Self> {
+    fn join(self) -> GenJoin<Self> where Self: Sized + Returns
+    {
         GenJoin::Outer(self)
     }
 }

@@ -18,53 +18,17 @@ impl<F, I> FnOnce<((F, I),)> for ApplyFn<F, I>
     }
 }
 
-pub struct GenApply<F, C>(GenMapReturn<GenAll<F, C>, ApplyFn<F::Return, C::Return>>)
-    where C: Returns,
-          F: Returns;
+pub type GenApply<F, C> = GenMapReturn<GenAll<F, C>, ApplyFn<<F as Returns>::Return, <C as Returns>::Return>>;
 
-impl<F, C> GenApply<F, C>
+pub trait Apply
 {
-    fn new(functor: F, c: C) -> Self {
-        GenApply(functor.all(c).map_return(ApplyFn(PhantomData)))
-    }
-}
-
-impl<C, F> Yields for GenApply<F, C>
-    where C: Yields
-{
-    type Yield = C::Yield;
-}
-
-impl<C, F> Returns for GenApply<F, C>
-    where F: Returns,
-          C: Returns
-{
-    type Return = <F::Return as FnOnce<(C::Return,)>>::Output;
-}
-
-impl<C, F> Generator for GenApply<F, C>
-{
-    type Transition = GenResult<Self>;
-
-    fn next(self) -> GenResult<Self> {
-        match self.0.next() {
-            GenResult::Yield(y, s) => GenResult::Yield(y, GenApply(s)),
-            GenResult::Return(r) => GenResult::Return(r),
-        }
-    }
-}
-
-pub trait Apply<I>: Generator
-{
-    fn apply<C>(self, c: C) -> GenApply<Self, C>
+    fn apply<C>(self, c: C) -> GenApply<Self, C> where Self: Sized + Returns, C: Returns, Self::Return: FnOnce<(C::Return,)>
     {
-        GenApply::new(self, c)
+        self.all(c).map_return(ApplyFn(PhantomData))
     }
 }
 
-impl<I, T> Apply<I> for T
-{
-}
+impl<T> Apply for T { }
 
 #[cfg(test)]
 mod tests {

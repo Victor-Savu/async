@@ -20,6 +20,9 @@ impl<F, L> Returns for GenRace<F, L>
 }
 
 impl<F, L> Generator for GenRace<F, L>
+    where F: Generator,
+          L: Generator<Yield = F::Yield>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>,
 {
     type Transition = GenResult<Self>;
 
@@ -49,7 +52,7 @@ impl<F, L> Generator for GenRace<F, L>
 
 pub trait Race
 {
-    fn race<L>(self, l: L) -> GenRace<Self, L>
+    fn race<L>(self, l: L) -> GenRace<Self, L> where Self: Sized
     {
         GenRace(GenEither::Former((self, l)))
     }

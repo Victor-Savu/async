@@ -18,7 +18,7 @@ impl<C, F> Returns for GenMapReturn<C, F>
 }
 
 impl<C, F> Generator for GenMapReturn<C, F>
-    where C: Returns,
+    where C: Generator,
           F: FnOnce<(C::Return,)>
 {
     type Transition = GenResult<Self>;
@@ -37,11 +37,11 @@ impl<C, F> Generator for GenMapReturn<C, F>
 pub trait MapReturn
     where Self: Returns
 {
-    fn map_return<F>(self, f: F) -> GenMapReturn<Self, F>
-        where F: FnOnce<(Self::Return,)>
+    fn map_return<F>(self, f: F) -> GenMapReturn<Self, F> where Self: Sized,
+        F: FnOnce<(Self::Return,)>
     {
         GenMapReturn(self, f)
     }
 }
 
-impl<C> MapReturn for C {}
+impl<C> MapReturn for C where C: Returns {}

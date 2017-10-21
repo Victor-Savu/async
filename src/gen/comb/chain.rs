@@ -5,39 +5,13 @@ use gen::{Generator, GenResult, Returns, Yields};
 use gen::comb::join::{Join, GenJoin};
 
 
-pub struct GenChain<F, L>(GenJoin<GenMapReturn<F, L>>);
-
-impl<F, L> Yields for GenChain<F, L>
-    where F: Yields
-{
-    type Yield = F::Yield;
-}
-
-impl<F, L> Returns for GenChain<F, L>
-    where F: Returns,
-          L: FnOnce<(F::Return,)>,
-          L::Output: Returns
-{
-    type Return = <L::Output as Returns>::Return;
-}
-
-impl<F, L> Generator for GenChain<F, L>
-{
-    type Transition = GenResult<Self>;
-
-    fn next(self) -> GenResult<Self> {
-        match self.0.next() {
-            GenResult::Yield(y, s) => GenResult::Yield(y, GenChain(s)),
-            GenResult::Return(r) => GenResult::Return(r),
-        }
-    }
-}
+pub type GenChain<F, L> = GenJoin<GenMapReturn<F, L>>;
 
 pub trait Chain
 {
-    fn chain<L>(self, l: L) -> GenChain<Self, L>
+    fn chain<L>(self, l: L) -> GenChain<Self, L> where Self: Sized + Returns,  L: FnOnce<(Self::Return,)>
     {
-        GenChain(self.map_return(l).join())
+        self.map_return(l).join()
     }
 }
 

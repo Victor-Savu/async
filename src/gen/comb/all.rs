@@ -65,39 +65,12 @@ impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRema
     }
 }
 
-pub struct GenAll<F, L>(GenChain<GenRace<F, L>, ContinueRemaining<F, L>>);
-
-impl<F, L> Yields for GenAll<F, L>
-    where F: Yields
-{
-    type Yield = F::Yield;
-}
-
-impl<F, L> Returns for GenAll<F, L>
-    where F: Returns,
-          L: Returns
-{
-    type Return = (F::Return, L::Return);
-}
-
-impl<F, L> Generator for GenAll<F, L>
-    where F: Yields + Returns,
-          L: Returns
-{
-    type Transition = GenResult<Self>;
-
-    fn next(self) -> GenResult<Self> {
-        match self.0.next() {
-            GenResult::Yield(y, s) => GenResult::Yield(y, GenAll(s)),
-            GenResult::Return(r) => GenResult::Return(r),
-        }
-    }
-}
+pub type GenAll<F, L>= GenChain<GenRace<F, L>, ContinueRemaining<F, L>>;
 
 pub trait All {
-    fn all<L>(self, l: L) -> GenAll<Self, L>
+    fn all<L>(self, l: L) -> GenAll<Self, L> where Self: Sized + Returns, L: Returns
     {
-        GenAll(self.race(l).chain(ContinueRemaining::new()))
+        self.race(l).chain(ContinueRemaining::new())
     }
 }
 

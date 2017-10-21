@@ -1,6 +1,6 @@
 use gen::{Generator, GenResult, Yields, Returns};
 
-pub struct GenWrap<Iter>(Iter) where Iter: Iterator + Sized;
+pub struct GenWrap<Iter>(Iter);
 
 impl<Iter> Yields for GenWrap<Iter>
     where Iter: Iterator
