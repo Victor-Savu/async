@@ -1,26 +1,41 @@
 use cat::sum::{Sum, Either};
+use cat::{Iso, Sur, Inj};
 
 pub enum Match<A, B> {
     Variant(A),
     Next(B),
 }
 
+impl<A, B> Sur<Either<A, B>> for Match<A, B> {
+    fn sur(e: Either<A, B>) -> Self {
+        match e {
+            Either::Left(l) => Match::Variant(l),
+            Either::Right(r) => Match::Next(r),
+        }
+    }
+}
+
+impl<A, B> Inj<Either<A, B>> for Match<A, B> {
+    fn inj(self) -> Either<A, B> {
+        match self {
+            Match::Variant(v) => Either::Left(v),
+            Match::Next(n) => Either::Right(n),
+        }
+    }
+}
+
+unsafe impl<A, B> Iso<Either<A, B>> for Match<A, B> {}
+
 impl<A, B> Sum for Match<A, B> {
     type Left = A;
     type Right = B;
-
-    fn to_canonical(self) -> Either<Self::Left, Self::Right> {
-        match self {
-            Match::Variant(var) => Either::Left(var),
-            Match::Next(next) => Either::Right(next),
-        }
-    }
+    type Output = Self;
 }
 
 pub trait Enum {
     type Head;
     type Tail: Enum;
-    type Output: Sum<Left = Self::Head, Right = Self::Tail>;
+    type Output: Iso<Either<Self::Head, Self::Tail>>;
 
     fn split(self) -> Self::Output;
 }

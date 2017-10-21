@@ -1,5 +1,5 @@
-use cat::sum::Sum;
-use cat::prod::Prod;
+use cat::sum::Either;
+use cat::Iso;
 
 pub mod match_transition;
 
@@ -9,7 +9,7 @@ pub trait Continuation {
     /// The type of the new state the fsm transitions into if the current continuation transition is
     /// activated
     type Continue: State;
-    type Output: Prod<Left = Self::Emit, Right = Self::Continue>;
+    type Output: Iso<(Self::Emit, Self::Continue)>;
 }
 
 impl Continuation for ! {
@@ -18,7 +18,9 @@ impl Continuation for ! {
     type Output = !;
 }
 
-impl<E, S> Continuation for (E, S) where S: State {
+impl<E, S> Continuation for (E, S)
+    where S: State
+{
     type Emit = E;
     type Continue = S;
     type Output = Self;
@@ -39,7 +41,7 @@ pub trait ContinuationList {
     /// activation of the subsequent continuation transitions
     type Tail: ContinuationList;
     /// The discriminated union type used for holding one of the continuations
-    type Output: Sum<Left = <Self::Head as Continuation>::Output, Right = <Self::Tail as ContinuationList>::Output>;
+    type Output: Iso<Either<<Self::Head as Continuation>::Output, <Self::Tail as ContinuationList>::Output>>;
 }
 
 /// The never type can be used to show that there are no ensuing continuations
@@ -72,7 +74,7 @@ pub trait State {
     ///  - The ContinuationList of this state
     ///  - The result of a transition, which is a Sum type between the output of the
     ///  ContinuationList and the Exit type
-    type Transition: StateTransition + Sum<Left = <<Self::Transition as StateTransition>::Continuation as ContinuationList>::Output, Right = <Self::Transition as StateTransition>::Exit>;
+    type Transition: StateTransition + Iso<Either<<<Self::Transition as StateTransition>::Continuation as ContinuationList>::Output, <Self::Transition as StateTransition>::Exit>>;
 
     /// Implements the state transition
     fn send(self, i: Self::Input) -> Self::Transition;

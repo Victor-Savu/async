@@ -1,42 +1,19 @@
 use gen::map::ret::{MapReturn, GenMapReturn};
-use gen::{Generator, GenResult};
+use gen::Returns;
 use gen::comb::join::{Join, GenJoin};
 
 
-pub struct GenChain<F, L>(GenJoin<GenMapReturn<F, L>>)
-    where F: Generator,
-          L: FnOnce<(F::Return,)>,
-          L::Output: Generator<Yield = F::Yield>;
-
-impl<F, L> Generator for GenChain<F, L>
-    where F: Generator,
-          L: FnOnce<(F::Return,)>,
-          L::Output: Generator<Yield = F::Yield>
-{
-    type Yield = F::Yield;
-    type Return = <L::Output as Generator>::Return;
-    type Transition = GenResult<Self>;
-
-    fn next(self) -> GenResult<Self> {
-        match self.0.next() {
-            GenResult::Yield(y, s) => GenResult::Yield(y, GenChain(s)),
-            GenResult::Return(r) => GenResult::Return(r),
-        }
-    }
-}
+pub type GenChain<F, L> = GenJoin<GenMapReturn<F, L>>;
 
 pub trait Chain
-    where Self: Generator
 {
-    fn chain<L>(self, l: L) -> GenChain<Self, L>
-        where L: FnOnce<(Self::Return,)>,
-              L::Output: Generator<Yield = Self::Yield>
+    fn chain<L>(self, l: L) -> GenChain<Self, L> where Self: Sized + Returns,  L: FnOnce<(Self::Return,)>
     {
-        GenChain(self.map_return(l).join())
+        self.map_return(l).join()
     }
 }
 
-impl<F> Chain for F where F: Generator {}
+impl<F> Chain for F {}
 
 #[cfg(test)]
 mod tests {

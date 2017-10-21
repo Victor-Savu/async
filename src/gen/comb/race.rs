@@ -1,37 +1,46 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 use gen::either::GenEither;
-use cat::sum::{Either, Sum};
-use cat::prod::Prod;
+use cat::sum::Either;
+use cat::{Iso, Inj};
 
 
-pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>)
-    where F: Generator,
-          L: Generator<Yield = F::Yield>;
+pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>);
 
+impl<F, L> Yields for GenRace<F, L>
+    where F: Yields
+{
+    type Yield = F::Yield;
+}
+
+impl<F, L> Returns for GenRace<F, L>
+    where F: Returns,
+          L: Returns
+{
+    type Return = GenEither<(F::Return, L), (F, L::Return)>;
+}
 
 impl<F, L> Generator for GenRace<F, L>
     where F: Generator,
-          L: Generator<Yield = F::Yield>
+          L: Generator<Yield = F::Yield>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>,
 {
-    type Yield = F::Yield;
-    type Return = GenEither<(F::Return, L), (F, L::Return)>;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
         match self.0 {
             GenEither::Former((f, l)) => {
-                match f.next().to_canonical() {
+                match f.next().inj() {
                     Either::Left(s) => {
-                        let (y, f) = s.to_canonical();
+                        let (y, f) = s.inj();
                         GenResult::Yield(y, GenRace(GenEither::Latter((f, l))))
                     }
                     Either::Right(f) => GenResult::Return(GenEither::Former((f, l))),
                 }
             }
             GenEither::Latter((f, l)) => {
-                match l.next().to_canonical() {
+                match l.next().inj() {
                     Either::Left(s) => {
-                        let (y, l) = s.to_canonical();
+                        let (y, l) = s.inj();
                         GenResult::Yield(y, GenRace(GenEither::Former((f, l))))
                     }
                     Either::Right(l) => GenResult::Return(GenEither::Latter((f, l))),
@@ -42,16 +51,14 @@ impl<F, L> Generator for GenRace<F, L>
 }
 
 pub trait Race
-    where Self: Generator
 {
-    fn race<L>(self, l: L) -> GenRace<Self, L>
-        where L: Generator<Yield = Self::Yield>
+    fn race<L>(self, l: L) -> GenRace<Self, L> where Self: Sized
     {
         GenRace(GenEither::Former((self, l)))
     }
 }
 
-impl<C> Race for C where C: Generator {}
+impl<C> Race for C {}
 
 
 #[cfg(test)]

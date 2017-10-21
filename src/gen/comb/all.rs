@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use gen::{Generator, GenResult};
+use gen::Returns;
 use gen::either::GenEither;
 use gen::comb::race::{GenRace, Race};
 use gen::comb::chain::{GenChain, Chain};
@@ -38,19 +38,18 @@ impl<I, F> FnOnce<(I,)> for Append<F> {
     }
 }
 
-pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>)
-    where F: Generator,
-          L: Generator<Yield = F::Yield>;
+pub struct ContinueRemaining<F, L>(PhantomData<(F, L)>);
 
-impl<F: Generator, L: Generator<Yield = F::Yield>> ContinueRemaining<F, L> {
+impl<F, L> ContinueRemaining<F, L>
+{
     fn new() -> Self {
         ContinueRemaining(PhantomData)
     }
 }
 
 impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRemaining<F, L>
-    where F: Generator,
-          L: Generator<Yield = F::Yield>
+    where F: Returns,
+          L: Returns
 {
     type Output = GenEither<GenMapReturn<L, Prepend<F::Return>>, GenMapReturn<F, Append<L::Return>>>;
 
@@ -64,35 +63,16 @@ impl<F, L> FnOnce<(GenEither<(F::Return, L), (F, L::Return)>,)> for ContinueRema
     }
 }
 
-pub struct GenAll<F, L>(GenChain<GenRace<F, L>, ContinueRemaining<F, L>>)
-    where F: Generator,
-          L: Generator<Yield = F::Yield>;
+pub type GenAll<F, L>= GenChain<GenRace<F, L>, ContinueRemaining<F, L>>;
 
-impl<F, L> Generator for GenAll<F, L>
-    where F: Generator,
-          L: Generator<Yield = F::Yield>
-{
-    type Yield = F::Yield;
-    type Return = (F::Return, L::Return);
-    type Transition = GenResult<Self>;
-
-    fn next(self) -> GenResult<Self> {
-        match self.0.next() {
-            GenResult::Yield(y, s) => GenResult::Yield(y, GenAll(s)),
-            GenResult::Return(r) => GenResult::Return(r),
-        }
-    }
-}
-
-pub trait All: Generator {
-    fn all<L>(self, l: L) -> GenAll<Self, L>
-        where L: Generator<Yield = Self::Yield>
+pub trait All {
+    fn all<L>(self, l: L) -> GenAll<Self, L> where Self: Sized + Returns, L: Returns
     {
-        GenAll(self.race(l).chain(ContinueRemaining::new()))
+        self.race(l).chain(ContinueRemaining::new())
     }
 }
 
-impl<F> All for F where F: Generator {}
+impl<F> All for F {}
 
 
 #[cfg(test)]

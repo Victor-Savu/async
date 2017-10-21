@@ -1,6 +1,7 @@
 use gen::Generator;
-use cat::sum::{Either, Sum};
-use cat::prod::Prod;
+use cat::sum::Either;
+use cat::Inj;
+
 
 pub struct GenIterate<C>(Option<C>);
 
@@ -12,9 +13,9 @@ impl<C> Iterator for GenIterate<C>
     fn next(&mut self) -> Option<Self::Item> {
         match self.0.take() {
             Some(coro) => {
-                match coro.next().to_canonical() {
+                match coro.next().inj() {
                     Either::Left(s) => {
-                        let (i, cnt) = s.to_canonical();
+                        let (i, cnt) = s.inj();
                         self.0 = Some(cnt);
                         Some(i)
                     }
