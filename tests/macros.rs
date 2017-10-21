@@ -1,4 +1,3 @@
-/*
 #[macro_use]
 extern crate o3;
 
@@ -13,4 +12,3 @@ fn each_works() {
 
     assert_eq!(v, [3, 4, 5, 6, 7, 8, 9]);
 }
-*/

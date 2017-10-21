@@ -1,7 +1,5 @@
-use cat::Iso;
-use cat::sum::Either;
 use gen::map::ret::{MapReturn, GenMapReturn};
-use gen::{Generator, GenResult, Returns, Yields};
+use gen::Returns;
 use gen::comb::join::{Join, GenJoin};
 
 

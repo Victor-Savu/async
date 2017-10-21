@@ -6,7 +6,7 @@ pub mod match_transition;
 pub trait Continuation {
     /// The type to be emitted if the current continuation transition is activated
     type Emit;
-    /// The type of the new state the fsm transitions inj if the current continuation transition is
+    /// The type of the new state the fsm transitions into if the current continuation transition is
     /// activated
     type Continue: State;
     type Output: Iso<(Self::Emit, Self::Continue)>;
@@ -26,18 +26,18 @@ impl<E, S> Continuation for (E, S)
     type Output = Self;
 }
 
-/// Computes the types of possible continuations sur the current state of a fsm
+/// Computes the types of possible continuations from the current state of a fsm
 ///
 /// A continuation is a pair-like (product) type of an emitted value and a new state. While the
 /// emitted value can be anything, the new state must implement the State trait. A continuation
-/// comes about when a state transitions inj another as a result of a call to `State::send`.
+/// comes about when a state transitions into another as a result of a call to `State::send`.
 ///
 /// The `ContinuationList` computes a list of these continuation types as an enumeration.
 pub trait ContinuationList {
-    /// The type of the continuation resulting sur the activation of the current continuation
+    /// The type of the continuation resulting from the activation of the current continuation
     /// transition
     type Head: Continuation;
-    /// The type of ContinuationList to be used for computing the continuations resulting sur the
+    /// The type of ContinuationList to be used for computing the continuations resulting from the
     /// activation of the subsequent continuation transitions
     type Tail: ContinuationList;
     /// The discriminated union type used for holding one of the continuations
@@ -53,7 +53,7 @@ impl ContinuationList for ! {
 
 pub trait StateTransition {
     type Continuation: ContinuationList;
-    /// Tye type of the exit value that this state may transition inj
+    /// Tye type of the exit value that this state may transition into
     type Exit;
 }
 
@@ -64,8 +64,8 @@ impl StateTransition for ! {
 
 /// Models a fsm state
 ///
-/// A state in a fsm has the sole characteristic that it can transition either inj a value and a
-/// child state or inj a final exit value. The transition is triggered by the receival of an input
+/// A state in a fsm has the sole characteristic that it can transition either into a value and a
+/// child state or into a final exit value. The transition is triggered by the receival of an input
 /// value.
 pub trait State {
     /// The type of the input value which triggers the transition

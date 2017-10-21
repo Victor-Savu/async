@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
-use cat::Iso;
-use cat::sum::Either;
-use gen::{Generator, GenResult, Yields, Returns};
+use gen::Returns;
 use gen::map::ret::{GenMapReturn, MapReturn};
 use gen::comb::all::{GenAll, All};
 
