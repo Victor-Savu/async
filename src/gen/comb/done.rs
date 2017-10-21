@@ -1,11 +1,16 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Returns, Yields};
 
 pub struct GenDone<U>(U);
 
-impl<U> Generator for GenDone<U>
-{
+impl<U> Yields for GenDone<U> {
     type Yield = !;
+}
+
+impl<U> Returns for GenDone<U> {
     type Return = U;
+}
+
+impl<U> Generator for GenDone<U> {
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {

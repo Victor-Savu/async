@@ -23,8 +23,7 @@ pub type Left<A> = Either<A, !>;
 
 pub type Right<A> = Either<!, A>;
 
-pub trait Sum
-{
+pub trait Sum {
     type Left;
     type Right;
     type Output: Iso<Either<Self::Left, Self::Right>>;

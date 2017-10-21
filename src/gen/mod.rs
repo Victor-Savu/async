@@ -10,30 +10,38 @@ use fsm::{State, ContinuationList, Continuation, StateTransition};
 use cat::sum::{Either, Sum};
 use cat::{Iso, Sur, Inj};
 
-pub trait Generator: Sized {
+pub trait Yields {
     type Yield;
+}
+
+pub trait Returns {
     type Return;
+}
+
+pub trait Generator: Sized + Yields + Returns {
     type Transition: Iso<Either<(Self::Yield, Self), Self::Return>>;
 
     fn next(self) -> Self::Transition;
 }
 
 pub enum GenResult<Coro>
-    where Coro: Generator
+    where Coro: Yields + Returns
 {
     Yield(Coro::Yield, Coro),
     Return(Coro::Return),
 }
 
 impl<Coro> Sum for GenResult<Coro>
-    where Coro: Generator
+    where Coro: Yields + Returns
 {
     type Left = (Coro::Yield, Coro);
     type Right = Coro::Return;
     type Output = Self;
 }
 
-impl<Coro> Sur<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  where Coro: Generator {
+impl<Coro> Sur<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>
+    where Coro: Yields + Returns
+{
     fn sur(e: Either<(Coro::Yield, Coro), Coro::Return>) -> Self {
         match e {
             Either::Left((y, c)) => GenResult::Yield(y, c),
@@ -42,7 +50,9 @@ impl<Coro> Sur<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  w
     }
 }
 
-impl<Coro> Inj<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  where Coro: Generator {
+impl<Coro> Inj<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>
+    where Coro: Yields + Returns
+{
     fn inj(self) -> Either<(Coro::Yield, Coro), Coro::Return> {
         match self {
             GenResult::Yield(y, c) => Either::Left((y, c)),
@@ -51,19 +61,40 @@ impl<Coro> Inj<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  w
     }
 }
 
-unsafe impl<Coro> Iso<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>  where Coro: Generator {}
+unsafe impl<Coro> Iso<Either<(Coro::Yield, Coro), Coro::Return>> for GenResult<Coro>
+    where Coro: Yields + Returns
+{
+}
 
 pub struct GenState<S>(S);
+
+impl<S> Yields for GenState<S>
+    where S: State<Input = ()>,
+          <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
+          <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
+{
+    type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit;
+}
+
+impl<S> Returns for GenState<S>
+    where S: State<Input = ()>,
+          <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>,
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
+          <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
+{
+    type Return = <S::Transition as StateTransition>::Exit;
+}
 
 impl<S> Generator for GenState<S>
     where S: State<Input = ()>,
           <S::Transition as StateTransition>::Continuation: ContinuationList<Tail = !>,
           <<S::Transition as StateTransition>::Continuation as ContinuationList>::Head: Continuation<Continue = S>,
-          <<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
-          <<<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<<S as State>::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
+          <<S::Transition as StateTransition>::Continuation as ContinuationList>::Output: Iso<Either<<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output, !>>,
+          <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Output: Iso<(<<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit, S)>
 {
-    type Yield = <<<S::Transition as StateTransition>::Continuation as ContinuationList>::Head as Continuation>::Emit;
-    type Return = <S::Transition as StateTransition>::Exit;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
@@ -81,11 +112,21 @@ impl<S> Generator for GenState<S>
     }
 }
 
-impl<Idx> Generator for RangeFrom<Idx>
+impl<Idx> Yields for RangeFrom<Idx>
     where Self: Iterator
 {
     type Yield = <Self as Iterator>::Item;
+}
+
+impl<Idx> Returns for RangeFrom<Idx>
+    where Self: Iterator
+{
     type Return = !;
+}
+
+impl<Idx> Generator for RangeFrom<Idx>
+    where Self: Iterator
+{
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {

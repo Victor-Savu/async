@@ -1,15 +1,26 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 use cat::sum::Either;
 use cat::Inj;
 
 pub struct GenMapReturn<C, F>(C, F);
 
+impl<C, F> Yields for GenMapReturn<C, F>
+    where C: Yields
+{
+    type Yield = C::Yield;
+}
+
+impl<C, F> Returns for GenMapReturn<C, F>
+    where C: Returns,
+          F: FnOnce<(C::Return,)>
+{
+    type Return = F::Output;
+}
+
 impl<C, F> Generator for GenMapReturn<C, F>
     where C: Generator,
           F: FnOnce<(C::Return,)>
 {
-    type Yield = C::Yield;
-    type Return = F::Output;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {

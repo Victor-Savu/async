@@ -32,8 +32,7 @@ impl<A, B> Sum for Match<A, B> {
     type Output = Self;
 }
 
-pub trait Enum
-{
+pub trait Enum {
     type Head;
     type Tail: Enum;
     type Output: Iso<Either<Self::Head, Self::Tail>>;

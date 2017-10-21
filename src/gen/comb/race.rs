@@ -1,4 +1,4 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 use gen::either::GenEither;
 use cat::sum::Either;
 use cat::{Iso, Inj};
@@ -7,17 +7,26 @@ use cat::{Iso, Inj};
 pub struct GenRace<F, L>(GenEither<(F, L), (F, L)>)
     where F: Generator,
           L: Generator<Yield = F::Yield>,
-          <L as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, L), <L as Generator>::Return>>
-          ;
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>;
 
+impl<F, L> Yields for GenRace<F, L>
+    where F: Yields
+{
+    type Yield = F::Yield;
+}
+
+impl<F, L> Returns for GenRace<F, L>
+    where F: Returns,
+          L: Returns
+{
+    type Return = GenEither<(F::Return, L), (F, L::Return)>;
+}
 
 impl<F, L> Generator for GenRace<F, L>
     where F: Generator,
-          <L as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, L), <L as Generator>::Return>>,
+          L::Transition: Iso<Either<(F::Yield, L), L::Return>>,
           L: Generator<Yield = F::Yield>
 {
-    type Yield = F::Yield;
-    type Return = GenEither<(F::Return, L), (F, L::Return)>;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
@@ -49,7 +58,7 @@ pub trait Race
 {
     fn race<L>(self, l: L) -> GenRace<Self, L>
         where L: Generator<Yield = Self::Yield>,
-              <L as Generator>::Transition: Iso<Either<(<Self as Generator>::Yield, L), <L as Generator>::Return>>
+              L::Transition: Iso<Either<(Self::Yield, L), L::Return>>
     {
         GenRace(GenEither::Former((self, l)))
     }

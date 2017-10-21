@@ -18,7 +18,9 @@ impl Continuation for ! {
     type Output = !;
 }
 
-impl<E, S> Continuation for (E, S) where S: State {
+impl<E, S> Continuation for (E, S)
+    where S: State
+{
     type Emit = E;
     type Continue = S;
     type Output = Self;

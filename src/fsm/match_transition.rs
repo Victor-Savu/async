@@ -90,7 +90,8 @@ impl<H, T> ContinuationList for MatchContinuation<Match<H, T>>
 {
     type Head = H;
     type Tail = MatchContinuation<T>;
-    type Output = Match<<Self::Head as Continuation>::Output, <Self::Tail as ContinuationList>::Output>;
+    type Output = Match<<Self::Head as Continuation>::Output,
+          <Self::Tail as ContinuationList>::Output>;
 }
 
 pub enum Transition<Next, Exit> {
@@ -115,7 +116,7 @@ impl<A, B> Sur<Either<A, B>> for Transition<A, B> {
 
 unsafe impl<A, B> Iso<Either<A, B>> for Transition<A, B> {}
 
-impl <A, B> Inj<Either<A, B>> for Transition<A, B> {
+impl<A, B> Inj<Either<A, B>> for Transition<A, B> {
     fn inj(self) -> Either<A, B> {
         match self {
             Transition::Continue(cont) => Either::Left(cont),

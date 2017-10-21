@@ -1,12 +1,20 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 
 pub struct GenWrap<Iter>(Iter) where Iter: Iterator + Sized;
+
+impl<Iter> Yields for GenWrap<Iter>
+    where Iter: Iterator
+{
+    type Yield = Iter::Item;
+}
+
+impl<Iter> Returns for GenWrap<Iter> {
+    type Return = Iter;
+}
 
 impl<Iter> Generator for GenWrap<Iter>
     where Iter: Iterator
 {
-    type Yield = Iter::Item;
-    type Return = Iter;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {

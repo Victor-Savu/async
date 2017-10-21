@@ -1,4 +1,4 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 use cat::sum::Either;
 use cat::{Iso, Inj};
 
@@ -9,13 +9,25 @@ pub enum GenJoin<C>
     Inner(C::Return),
 }
 
+impl<C> Yields for GenJoin<C>
+    where C: Yields
+{
+    type Yield = C::Yield;
+}
+
+impl<C> Returns for GenJoin<C>
+    where C: Returns,
+          C::Return: Returns
+{
+    type Return = <C::Return as Returns>::Return;
+}
+
 impl<C> Generator for GenJoin<C>
     where C: Generator,
           C::Return: Generator<Yield = C::Yield>,
-          <<C as Generator>::Return as Generator>::Transition: Iso<Either<(<C as Generator>::Yield, <C as Generator>::Return), <<C as Generator>::Return as Generator>::Return>>
+          <C::Return as Generator>::Transition: Iso<Either<(C::Yield, C::Return),
+                                                           <C::Return as Returns>::Return>>
 {
-    type Yield = C::Yield;
-    type Return = <C::Return as Generator>::Return;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
@@ -42,16 +54,15 @@ impl<C> Generator for GenJoin<C>
     }
 }
 
-pub trait Join where Self: Generator
+pub trait Join
+    where Self: Generator
 {
     fn join(self) -> GenJoin<Self> {
         GenJoin::Outer(self)
     }
 }
 
-impl<C> Join for C where C: Generator
-{
-}
+impl<C> Join for C where C: Generator {}
 
 
 #[cfg(test)]

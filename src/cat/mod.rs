@@ -12,16 +12,24 @@ pub trait Sur<X> {
 }
 
 impl<X> Sur<X> for X {
-    fn sur(x: X) -> Self { x }
+    fn sur(x: X) -> Self {
+        x
+    }
 }
 
-impl<X, T> Inj<X> for T where X: Sur<T> {
+impl<X, T> Inj<X> for T
+    where X: Sur<T>
+{
     fn inj(self) -> X {
         X::sur(self)
     }
 }
 
-pub unsafe trait Iso<X> where Self: Sur<X>, Self: Inj<X>  {}
+pub unsafe trait Iso<X>
+    where Self: Sur<X>,
+          Self: Inj<X>
+{
+}
 unsafe impl<X> Iso<X> for X {}
 
 impl Sur<(!, !)> for ! {

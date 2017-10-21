@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use cat::Iso;
 use cat::sum::Either;
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 use gen::map::ret::{GenMapReturn, MapReturn};
 use gen::comb::all::{GenAll, All};
 
@@ -37,6 +37,19 @@ impl<F, C> GenApply<F, C>
     }
 }
 
+impl<C, F> Yields for GenApply<F, C>
+    where C: Yields
+{
+    type Yield = C::Yield;
+}
+
+impl<C, F> Returns for GenApply<F, C>
+    where F: Returns,
+          C: Returns
+{
+    type Return = <F::Return as FnOnce<(C::Return,)>>::Output;
+}
+
 impl<C, F> Generator for GenApply<F, C>
     where C: Generator,
           F: Generator<Yield = C::Yield>,
@@ -44,8 +57,6 @@ impl<C, F> Generator for GenApply<F, C>
           F::Transition: Iso<Either<(C::Yield, F), F::Return>>,
           F::Return: FnOnce<(C::Return,)>
 {
-    type Yield = C::Yield;
-    type Return = <F::Return as FnOnce<(C::Return,)>>::Output;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
@@ -61,8 +72,8 @@ pub trait Apply<I>: Generator
 {
     fn apply<C>(self, c: C) -> GenApply<Self, C>
         where C: Generator<Yield = Self::Yield, Return = I>,
-              <C as Generator>::Transition: Iso<Either<(<Self as Generator>::Yield, C), I>>,
-              <C as Generator>::Transition: Iso<Either<(<Self as Generator>::Yield, Self), <Self as Generator>::Return>>
+              C::Transition: Iso<Either<(Self::Yield, C), I>>,
+              C::Transition: Iso<Either<(Self::Yield, Self), Self::Return>>
     {
         GenApply::new(self, c)
     }

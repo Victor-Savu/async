@@ -1,4 +1,4 @@
-use gen::{Generator, GenResult};
+use gen::{Generator, GenResult, Yields, Returns};
 use cat::sum::Either;
 use cat::{Iso, Sur, Inj};
 
@@ -26,15 +26,26 @@ impl<F, L> Inj<Either<F, L>> for GenEither<F, L> {
     }
 }
 
-unsafe impl<F, L> Iso<Either<F, L>> for GenEither<F, L>  {}
+unsafe impl<F, L> Iso<Either<F, L>> for GenEither<F, L> {}
+
+impl<F, L> Yields for GenEither<F, L>
+    where F: Yields
+{
+    type Yield = F::Yield;
+}
+
+impl<F, L> Returns for GenEither<F, L>
+    where F: Returns,
+          L: Returns<Return = F::Return>
+{
+    type Return = F::Return;
+}
 
 impl<F, L> Generator for GenEither<F, L>
     where F: Generator,
           L: Generator<Yield = F::Yield, Return = F::Return>,
-          <L as Generator>::Transition: Iso<Either<(<F as Generator>::Yield, L), <F as Generator>::Return>>
+          L::Transition: Iso<Either<(F::Yield, L), F::Return>>
 {
-    type Yield = F::Yield;
-    type Return = F::Return;
     type Transition = GenResult<Self>;
 
     fn next(self) -> GenResult<Self> {
